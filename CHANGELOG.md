@@ -3,16 +3,15 @@
 
 ## v0.1.0 (2026-06-18)
 
+### Chores
+
+- Fix versioning, badge URL, and restore CHANGELOG [skip ci]
+  ([`9f6cce3`](https://github.com/blake-russell/rpt/commit/9f6cce347678951164f2221797123032124b6192))
+
 ### Features
 
-- Initial release of RPT — Retirement Planning Tool
-- Year-by-year retirement projection with federal tax modeling and 3-bucket withdrawal strategies (Traditional and Proportional)
-- Income module: W2 wages, bonuses, raise schedules, Social Security estimates
-- Assets module: 401(k)/IRA/Roth/Brokerage accounts with yfinance price refresh
-- Debts module: full amortization schedules, escrow tracking, equity calculation
-- Budget module: Wells Fargo CSV import, merchant categorization, exclusion rules, duplicate detection
-- Life Events module: dependent milestones, vacation/travel expenses flowing into projections
-- People module: household registry (user, spouse, dependents) driving all projection timelines
-- AI Insights module: placeholder for upcoming OpenRouter integration
-- Windows easy-install scripts (`INSTALL_UPDATE.bat`, `START.bat`) for non-technical users
-- Demo data seeder (`seed_demo` management command)
+- Initial alpha release
+  ([`e8329b6`](https://github.com/blake-russell/rpt/commit/e8329b682bdde92eb4e8d6e8965c4732413a998d))
+
+
+## v0.0.0 (2026-06-18)
