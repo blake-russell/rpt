@@ -229,7 +229,9 @@ class Command(BaseCommand):
                     "shares": shares.quantize(Decimal("0.0001")),
                     "avg_cost_basis": Decimal("220.00"),
                     "last_price": VTI_PRICE,
-                    "last_price_updated": datetime.combine(CURRENT_DATE, datetime.min.time(), tzinfo=timezone.utc),
+                    "last_price_updated": datetime.combine(
+                        CURRENT_DATE, datetime.min.time(), tzinfo=timezone.utc
+                    ),
                 },
             )
             MonthlyContribution.objects.update_or_create(
@@ -449,10 +451,10 @@ class Command(BaseCommand):
 
         # Payroll deposits — bi-weekly (1st/15th John, 7th/21st Jane)
         rows += [
-            (d(1),  "DIRECT DEP ACME CORP PAYROLL", "2054.38", "", "Posted"),
+            (d(1), "DIRECT DEP ACME CORP PAYROLL", "2054.38", "", "Posted"),
             (d(15), "DIRECT DEP ACME CORP PAYROLL", "2054.38", "", "Posted"),
-            (d(7),  "DIRECT DEP BETA INC PAYROLL",  "1478.79", "", "Posted"),
-            (d(21), "DIRECT DEP BETA INC PAYROLL",  "1478.79", "", "Posted"),
+            (d(7), "DIRECT DEP BETA INC PAYROLL", "1478.79", "", "Posted"),
+            (d(21), "DIRECT DEP BETA INC PAYROLL", "1478.79", "", "Posted"),
         ]
         # Mortgage (escrowed: P+I + homeowners insurance + property tax)
         rows.append((d(5), "WELLS FARGO HOME MTG PMT", "-1874.00", "", "Posted"))
@@ -460,18 +462,18 @@ class Command(BaseCommand):
         rows.append((d(10), "AUTO LOAN PMT JOHN VEHICLE", "-608.00", "", "Posted"))
         rows.append((d(12), "AUTO LOAN PMT JANE VEHICLE", "-368.00", "", "Posted"))
         # Insurance
-        rows.append((d(3),  "BCBSTX HEALTH INS PREMIUM",  "-450.00", "", "Posted"))
-        rows.append((d(6),  "STATE FARM AUTO INS PAYMENT", "-208.00", "", "Posted"))
+        rows.append((d(3), "BCBSTX HEALTH INS PREMIUM", "-450.00", "", "Posted"))
+        rows.append((d(6), "STATE FARM AUTO INS PAYMENT", "-208.00", "", "Posted"))
         # Utilities
         rows += [
-            (d(8),  "ATMOS ENERGY GAS BILL",    "-145.00", "", "Posted"),
-            (d(9),  "ONCOR ELECTRIC DELIVERY",  "-210.00", "", "Posted"),
-            (d(11), "AT&T WIRELESS",             "-185.00", "", "Posted"),
-            (d(13), "SPECTRUM INTERNET CABLE",  "-120.00", "", "Posted"),
+            (d(8), "ATMOS ENERGY GAS BILL", "-145.00", "", "Posted"),
+            (d(9), "ONCOR ELECTRIC DELIVERY", "-210.00", "", "Posted"),
+            (d(11), "AT&T WIRELESS", "-185.00", "", "Posted"),
+            (d(13), "SPECTRUM INTERNET CABLE", "-120.00", "", "Posted"),
         ]
         # Groceries
         rows += [
-            (d(3),  "HEB GROCERY 1234", "-280.00", "", "Posted"),
+            (d(3), "HEB GROCERY 1234", "-280.00", "", "Posted"),
             (d(17), "HEB GROCERY 1234", "-265.00", "", "Posted"),
         ]
 
@@ -491,32 +493,32 @@ class Command(BaseCommand):
 
         # Groceries
         rows += [
-            (d(2),  "KROGER 1234 GROCERIES",   "-195.00", "", "Posted"),
-            (d(16), "WALMART GROCERY PICKUP",   "-175.00", "", "Posted"),
+            (d(2), "KROGER 1234 GROCERIES", "-195.00", "", "Posted"),
+            (d(16), "WALMART GROCERY PICKUP", "-175.00", "", "Posted"),
         ]
         # Dining
         rows += [
-            (d(5),  "CHICK FIL A 1234",        "-42.50", "", "Posted"),
-            (d(11), "CHIPOTLE MEXICAN GRILL",   "-38.00", "", "Posted"),
-            (d(18), "PIZZA HUT 1234",           "-55.00", "", "Posted"),
-            (d(25), "OLIVE GARDEN 1234",        "-78.00", "", "Posted"),
+            (d(5), "CHICK FIL A 1234", "-42.50", "", "Posted"),
+            (d(11), "CHIPOTLE MEXICAN GRILL", "-38.00", "", "Posted"),
+            (d(18), "PIZZA HUT 1234", "-55.00", "", "Posted"),
+            (d(25), "OLIVE GARDEN 1234", "-78.00", "", "Posted"),
         ]
         # Gas
         rows += [
-            (d(4),  "EXXON MOBIL GAS 1234",    "-65.00", "", "Posted"),
-            (d(19), "SHELL GAS STATION 5678",   "-70.00", "", "Posted"),
+            (d(4), "EXXON MOBIL GAS 1234", "-65.00", "", "Posted"),
+            (d(19), "SHELL GAS STATION 5678", "-70.00", "", "Posted"),
         ]
         # Subscriptions
         rows += [
-            (d(1), "NETFLIX.COM",   "-22.99", "", "Posted"),
-            (d(1), "SPOTIFY USA",   "-11.99", "", "Posted"),
-            (d(3), "AMAZON PRIME",  "-14.99", "", "Posted"),
+            (d(1), "NETFLIX.COM", "-22.99", "", "Posted"),
+            (d(1), "SPOTIFY USA", "-11.99", "", "Posted"),
+            (d(3), "AMAZON PRIME", "-14.99", "", "Posted"),
         ]
         # Kids / household misc
         rows += [
-            (d(8),  "TARGET STORES 1234",          "-120.00", "", "Posted"),
-            (d(22), "AMAZON.COM AMZN.COM/BILL",     "-85.00",  "", "Posted"),
-            (d(14), "WALGREENS 1234",               "-45.00",  "", "Posted"),
+            (d(8), "TARGET STORES 1234", "-120.00", "", "Posted"),
+            (d(22), "AMAZON.COM AMZN.COM/BILL", "-85.00", "", "Posted"),
+            (d(14), "WALGREENS 1234", "-45.00", "", "Posted"),
         ]
 
         return rows
