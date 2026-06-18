@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} — RPT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'budget_categories' %}" class="text-decoration-none small">&larr; Back to Categories</a>
+  <h2 class="mt-1">{{ title }}</h2>
+</div>
+
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'budget_categories' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} — RPT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'income_dashboard' %}" class="text-decoration-none small">&larr; Back to Income</a>
+  <h2 class="mt-1">{{ title }}</h2>
+</div>
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="post" id="w2-form">
+          {% csrf_token %}
+
+          <h6 class="text-muted mb-3 text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Employment</h6>
+          {{ form.person|as_crispy_field }}
+          {{ form.employer|as_crispy_field }}
+          {{ form.annual_salary|as_crispy_field }}
+          {{ form.effective_date|as_crispy_field }}
+          {{ form.is_current|as_crispy_field }}
+
+          <hr class="my-3">
+          <h6 class="text-muted mb-3 text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Bonus / Incentive <span class="fw-normal text-muted">(optional)</span></h6>
+          {{ form.bonus_type|as_crispy_field }}
+          <div id="bonus-amount-fields" style="display:none;">
+            {{ form.bonus_amount|as_crispy_field }}
+            {{ form.bonus_description|as_crispy_field }}
+          </div>
+
+          <hr class="my-3">
+          <h6 class="text-muted mb-3 text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Annual Merit Increase <span class="fw-normal text-muted">(optional)</span></h6>
+          {{ form.annual_merit_pct|as_crispy_field }}
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'income_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var bonusTypeSelect = document.getElementById('id_bonus_type');
+    var bonusAmountFields = document.getElementById('bonus-amount-fields');
+
+    function updateBonus() {
+      bonusAmountFields.style.display = bonusTypeSelect.value ? '' : 'none';
+    }
+
+    bonusTypeSelect.addEventListener('change', updateBonus);
+    updateBonus();
+  })();
+</script>
+{% endblock %}

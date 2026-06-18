@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Settings — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">&#9881;&#65039; Settings</h2>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">App Configuration</div>
+      <div class="card-body">
+        <h6 class="text-muted text-uppercase mb-3" style="font-size:.7rem; letter-spacing:.05em;">AI Insights API Configuration</h6>
+        <form method="post"
+              hx-post="{% url 'settings' %}"
+              hx-target="#toast-container"
+              hx-swap="innerHTML">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <button type="submit" class="btn btn-primary">Save Settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">About Settings</div>
+      <div class="card-body small text-muted">
+        <p><strong>API Provider</strong> — Select your AI provider. Currently only OpenRouter is supported. Additional providers may be added in future updates.</p>
+        <p><strong>OpenRouter API Key</strong> — Required for AI Insights. Get one at
+          <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a>.
+          Stored only in your local database, never in code or config files.</p>
+        <p class="mb-0"><strong>Default Model</strong> — The OpenRouter model identifier to use for AI analysis
+          (e.g. <code>openai/gpt-4o</code>, <code>anthropic/claude-3-5-sonnet</code>).
+          See <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a> for available options.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,474 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}Budget — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">📊 Budget</h2>
+  <div class="d-flex gap-2">
+    <a href="{% url 'budget_exclusion_rules' %}" class="btn btn-outline-warning btn-sm">Manage Exclusions</a>
+    <a href="{% url 'budget_categories' %}" class="btn btn-outline-secondary btn-sm">Manage Categories</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-semibold">Import CSV Data</div>
+      <div class="card-body py-3">
+        <form method="post" action="{% url 'budget_import_csv' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ import_form|crispy }}
+          <button type="submit" class="btn btn-primary btn-sm mt-1">Upload & Import</button>
+        </form>
+      </div>
+    </div>
+
+    {% if recent_import_logs %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-semibold">Recent Imports</div>
+      <div class="card-body p-0">
+        {% for log in recent_import_logs %}
+        <div class="px-3 py-2 border-bottom small">
+          <div class="d-flex justify-content-between">
+            <span class="fw-semibold">{{ log.imported_at|date:"M d, H:i" }} — {{ log.bank }} / {{ log.source }}</span>
+            <span>+{{ log.imported_count }} | skip {{ log.skipped_count }} | dup {{ log.staged_count }}</span>
+          </div>
+          {% if log.skip_details_json and log.skip_details_json != '[]' %}
+          <details class="mt-1">
+            <summary class="text-warning" style="cursor:pointer; font-size:.75rem;">{{ log.skipped_count }} skipped row(s) — click to expand</summary>
+            <div class="mt-1" style="font-size:.72rem; font-family: monospace; max-height:120px; overflow-y:auto;">
+              {% load budget_extras %}
+              {% for item in log.skip_details_json|parse_json %}
+              <div class="text-muted">{{ item.date }} | {{ item.description|truncatechars:40 }} | ${{ item.amount }} — <em>{{ item.reason }}</em></div>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Expense Breakdown (Current Filter)</div>
+      <div class="card-body py-2">
+        <p class="text-muted small mb-2">Includes uncategorized expenses until mappings are assigned.</p>
+        <canvas id="expensePieChart" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-semibold">Rolling Monthly Average ({{ months_count }} month{{ months_count|pluralize }})</div>
+      <div class="card-body">
+        <div class="row g-2 text-center">
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2">
+              <p class="text-muted small mb-1">Income (Avg / Month)</p>
+              <h5 class="text-success mb-0">${{ rolling_avg_income|floatformat:2|intcomma }}</h5>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2">
+              <p class="text-muted small mb-1">Expenses (Avg / Month)</p>
+              <h5 class="text-danger mb-0">${{ rolling_avg_expenses|floatformat:2|intcomma }}</h5>
+              <div class="text-muted" style="font-size:.72rem;">Non-debt avg: ${{ rolling_avg_non_debt_expenses|floatformat:2|intcomma }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2">
+              <p class="text-muted small mb-1">Net (Avg / Month)</p>
+              <h5 class="mb-0 {% if rolling_avg_net >= 0 %}text-success{% else %}text-danger{% endif %}">${{ rolling_avg_net|floatformat:2|intcomma }}</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-semibold">Aggregate Totals (All Included Transactions)</div>
+      <div class="card-body">
+        <div class="row g-2 text-center">
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2">
+              <p class="text-muted small mb-1">Income (Aggregate)</p>
+              <h6 class="text-success mb-0">${{ aggregate_income|floatformat:2|intcomma }}</h6>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2">
+              <p class="text-muted small mb-1">Expenses (Aggregate)</p>
+              <h6 class="text-danger mb-0">${{ aggregate_expenses|floatformat:2|intcomma }}</h6>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2">
+              <p class="text-muted small mb-1">Net (Aggregate)</p>
+              <h6 class="mb-0 {% if aggregate_net >= 0 %}text-success{% else %}text-danger{% endif %}">${{ aggregate_net|floatformat:2|intcomma }}</h6>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Current Filter Snapshot</div>
+      <div class="card-body">
+        <div class="row g-2 text-center">
+          <div class="col-md-3">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Income</div>
+              <div class="fw-semibold text-success">${{ filtered_income|floatformat:2|intcomma }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Expenses</div>
+              <div class="fw-semibold text-danger">${{ filtered_expenses|floatformat:2|intcomma }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Net</div>
+              <div class="fw-semibold {% if filtered_net >= 0 %}text-success{% else %}text-danger{% endif %}">${{ filtered_net|floatformat:2|intcomma }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Rows</div>
+              <div class="fw-semibold">{{ total_transactions }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-2 text-center mt-1">
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Checking Rows</div>
+              <div class="fw-semibold">{{ checking_count }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Credit Rows</div>
+              <div class="fw-semibold">{{ credit_count }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Uncategorized</div>
+              <div class="fw-semibold {% if uncategorized_count %}text-warning{% endif %}">{{ uncategorized_count }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-2 text-center mt-1">
+          <div class="col-12">
+            <div class="bg-body-secondary rounded p-2 small">
+              <div class="text-muted" style="font-size:.7rem;">Pending Duplicate Review</div>
+              <div class="fw-semibold {% if pending_duplicates_count %}text-danger{% endif %}">{{ pending_duplicates_count }}</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent fw-semibold">Filter Transactions</div>
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Month</label>
+        <select name="month" class="form-select form-select-sm">
+          <option value="">All months</option>
+          {% for month in month_options %}
+          <option value="{{ month }}" {% if selected_month == month %}selected{% endif %}>{{ month }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select form-select-sm">
+          <option value="">All categories</option>
+          {% for category in categories %}
+          <option value="{{ category.pk }}" {% if selected_category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        <a href="{% url 'budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="includeExcluded" name="include_excluded" value="1" {% if include_excluded %}checked{% endif %}>
+          <label class="form-check-label small" for="includeExcluded">
+            Include excluded transactions in this table/filter view
+          </label>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4 {% if pending_duplicates_count %}border-danger{% endif %}">
+  <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+    Potential Duplicate Transactions
+    {% if pending_duplicates_count %}<span class="badge bg-danger">{{ pending_duplicates_count }} pending</span>{% endif %}
+  </div>
+  <div class="card-body p-0">
+    {% if pending_duplicates %}
+    <div class="alert alert-warning m-3 mb-0 small py-2">
+      These transactions share the same date, description, amount, and source as an already-imported transaction.
+      <strong>Approve</strong> to include them in budget calculations, or <strong>Deny</strong> to exclude.
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Source</th>
+            <th class="text-end">Amount</th>
+            <th>Category</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in pending_duplicates %}
+          <tr>
+            <td>{{ tx.date }}</td>
+            <td>{{ tx.raw_description }}</td>
+            <td>{{ tx.get_source_display }}</td>
+            <td class="text-end {% if tx.amount < 0 %}text-danger{% else %}text-success{% endif %}">${{ tx.amount|floatformat:2|intcomma }}</td>
+            <td>{% if tx.category %}<span class="badge" style="background: {{ tx.category.color_hex }}">{{ tx.category.name }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="text-end">
+              <div class="d-flex gap-1 justify-content-end">
+                <form method="post" action="{% url 'budget_duplicate_approve' tx.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                </form>
+                <form method="post" action="{% url 'budget_duplicate_deny' tx.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Deny</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-3 text-muted small">No pending duplicates.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent fw-semibold">Unmatched Merchant Descriptions</div>
+  <div class="card-body p-0">
+    {% if unmatched_descriptions %}
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Raw Description</th>
+            <th>Friendly Name</th>
+            <th>Category</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for raw in unmatched_descriptions %}
+          <tr>
+            <td><code>{{ raw }}</code></td>
+            <td>
+              <form method="post" action="{% url 'budget_save_mapping' %}" class="row g-2">
+                {% csrf_token %}
+                <input type="hidden" name="raw_description" value="{{ raw }}">
+                <input type="text" name="friendly_name" class="form-control form-control-sm" value="{{ raw|truncatechars:40 }}" required>
+            </td>
+            <td>
+                <select name="category" class="form-select form-select-sm">
+                  <option value="">Uncategorized</option>
+                  {% for category in categories %}
+                  <option value="{{ category.pk }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+            </td>
+            <td class="text-end">
+                <button type="submit" class="btn btn-outline-primary btn-sm">Save Mapping</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-3 text-muted small">No unmatched descriptions.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent fw-semibold">Transactions (latest {{ transactions|length }})</div>
+  <div class="card-body p-0">
+    {% if transactions %}
+    <form id="bulk-actions-form" method="post" action="{% url 'budget_transactions_bulk_action' %}" class="p-3 border-bottom bg-body-tertiary">
+      {% csrf_token %}
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small">Bulk Action</label>
+          <select name="action" class="form-select form-select-sm" required>
+            <option value="">Choose...</option>
+            <option value="exclude">Exclude selected</option>
+            <option value="include">Include selected</option>
+            <option value="set_category">Assign category to selected</option>
+            <option value="clear_category">Clear category on selected</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Category (for assign)</label>
+          <select name="category_id" class="form-select form-select-sm">
+            <option value="">Choose category...</option>
+            {% for category in categories %}
+            <option value="{{ category.pk }}">{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Note (exclude)</label>
+          <input type="text" name="note" class="form-control form-control-sm" placeholder="Internal transfer / ignore for spend">
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="select-all-transactions">Select All</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-selected-transactions">Clear</button>
+          <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        </div>
+      </div>
+    </form>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width: 36px;"></th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Friendly</th>
+            <th>Category</th>
+            <th>Source</th>
+            <th class="text-end">Amount</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr>
+            <td>
+              <input type="checkbox" class="form-check-input tx-select" name="transaction_ids" value="{{ tx.pk }}" form="bulk-actions-form" aria-label="Select transaction {{ tx.pk }}">
+            </td>
+            <td>{{ tx.date }}</td>
+            <td>{{ tx.raw_description }}</td>
+            <td>{{ tx.friendly_name|default:"—" }}</td>
+            <td>{% if tx.category %}<span class="badge" style="background: {{ tx.category.color_hex }}">{{ tx.category.name }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>{{ tx.get_source_display }}</td>
+            <td class="text-end {% if tx.amount < 0 %}text-danger{% else %}text-success{% endif %}">${{ tx.amount|floatformat:2|intcomma }}</td>
+            <td>
+              {% if tx.is_excluded %}
+                <span class="badge bg-warning text-dark" title="{{ tx.exclusion_note|default:'Excluded' }}">Excluded</span>
+              {% else %}
+                <span class="badge bg-success">Included</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if tx.is_excluded %}
+                <form method="post" action="{% url 'budget_transaction_include' tx.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-success btn-sm">Include</button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'budget_transaction_exclude' tx.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="note" value="Internal transfer / ignore for spend">
+                  <button type="submit" class="btn btn-outline-warning btn-sm">Exclude</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-3 text-muted small">No transactions yet. Import a CSV to begin.</div>
+    {% endif %}
+  </div>
+</div>
+
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_values|json_script:"chart-values" }}
+{{ chart_colors|json_script:"chart-colors" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    var labels = JSON.parse(document.getElementById('chart-labels').textContent || '[]');
+    var values = JSON.parse(document.getElementById('chart-values').textContent || '[]');
+    var colors = JSON.parse(document.getElementById('chart-colors').textContent || '[]');
+    var canvas = document.getElementById('expensePieChart');
+    if (!canvas || !labels.length) {
+      return;
+    }
+    new Chart(canvas, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                var val = Number(context.raw || 0);
+                return context.label + ': $' + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              }
+            }
+          }
+        },
+      },
+    });
+  })();
+
+  (function() {
+    var selectAllButton = document.getElementById('select-all-transactions');
+    var clearButton = document.getElementById('clear-selected-transactions');
+    var checkboxes = document.querySelectorAll('.tx-select');
+
+    if (!selectAllButton || !clearButton || !checkboxes.length) {
+      return;
+    }
+
+    selectAllButton.addEventListener('click', function() {
+      checkboxes.forEach(function(cb) { cb.checked = true; });
+    });
+
+    clearButton.addEventListener('click', function() {
+      checkboxes.forEach(function(cb) { cb.checked = false; });
+    });
+  })();
+</script>
+{% endblock %}

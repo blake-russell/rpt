@@ -1,0 +1,93 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}Retirement Planning Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Retirement Planning Tool</h2>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Income</p>
+        <h4 class="mb-0 text-success">${{ total_income|floatformat:0|intcomma|default:"—" }}</h4>
+        <a href="/income/" class="small text-decoration-none">Manage &rarr;</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Assets</p>
+        <h4 class="mb-0 text-primary">{% if total_assets is not None %}${{ total_assets|floatformat:0|intcomma }}{% else %}—{% endif %}</h4>
+        {% if total_real_estate_equity %}
+        <div class="text-muted" style="font-size:.75rem;">Includes investment real estate equity: ${{ total_real_estate_equity|floatformat:0|intcomma }}</div>
+        {% endif %}
+        {% if primary_residence_equity %}
+        <div class="text-muted" style="font-size:.75rem;">Excl. primary residence equity: ${{ primary_residence_equity|floatformat:0|intcomma }}</div>
+        {% endif %}
+        <a href="/assets/" class="small text-decoration-none">Manage &rarr;</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Debt</p>
+        <h4 class="mb-0 text-danger">${{ total_debt|floatformat:0|intcomma|default:"—" }}</h4>
+        <a href="/debts/" class="small text-decoration-none">Manage &rarr;</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Net Worth</p>
+        <h4 class="mb-0">{% if net_worth is not None %}${{ net_worth|floatformat:0|intcomma }}{% else %}—{% endif %}</h4>
+        <a href="/retirement/" class="small text-decoration-none">Projections &rarr;</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Quick Links</div>
+      <div class="card-body">
+        <div class="list-group list-group-flush">
+          <a href="/people/" class="list-group-item list-group-item-action">&#x1F464; People &amp; Household</a>
+          <a href="/income/" class="list-group-item list-group-item-action">&#x1F4B0; Income &amp; Wages</a>
+          <a href="/assets/" class="list-group-item list-group-item-action">&#x1F4C8; Investment Assets</a>
+          <a href="/debts/" class="list-group-item list-group-item-action">&#x1F3E6; Loans &amp; Debts</a>
+          <a href="/life/" class="list-group-item list-group-item-action">&#x1F46A; Life Events</a>
+          <a href="/budget/" class="list-group-item list-group-item-action">&#x1F4CA; Budget &amp; Expenses</a>
+          <a href="/retirement/" class="list-group-item list-group-item-action">&#x1F3D6;&#xFE0F; Retirement Projections</a>
+          <a href="/ai-insights/" class="list-group-item list-group-item-action">&#x1F916; AI Insights</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Getting Started</div>
+      <div class="card-body">
+        <ol class="mb-0 small">
+          <li class="mb-1">Add yourself (and spouse) in <a href="/people/">People</a></li>
+          <li class="mb-1">Add dependents in <a href="/people/">People</a></li>
+          <li class="mb-1">Add your income &amp; Social Security in <a href="/income/">Income</a></li>
+          <li class="mb-1">Add investment accounts &amp; holdings in <a href="/assets/">Assets</a></li>
+          <li class="mb-1">Enter loans in <a href="/debts/">Debts</a></li>
+          <li class="mb-1">Add life events in <a href="/life/">Life &amp; Events</a></li>
+          <li class="mb-1">Import bank CSVs in <a href="/budget/">Budget</a></li>
+          <li class="mb-1">View your <a href="/retirement/">Retirement Projection</a></li>
+          <li>Optionally configure <a href="/settings/">OpenRouter API key</a> for AI insights</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

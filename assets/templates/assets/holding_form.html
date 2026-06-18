@@ -1,0 +1,34 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} — RPT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'assets_dashboard' %}" class="text-decoration-none small">&larr; Back to Assets</a>
+  <h2 class="mt-1">{{ title }}</h2>
+</div>
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <p class="text-muted small mt-2">
+            Enter the <strong>average cost per share</strong> across all your purchases of this holding.
+            Shares and avg cost basis are all that's needed — live price is fetched via Refresh Prices.<br>
+            <strong>Crypto:</strong> use the yfinance format <code>ETH-USD</code>, <code>BTC-USD</code>, etc.<br>
+            <strong>Non-market assets</strong> (pensions, private funds, etc.): use <code>N/A</code> as the ticker.
+            Price refresh will skip it automatically; update the value manually via "Edit".
+          </p>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'assets_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

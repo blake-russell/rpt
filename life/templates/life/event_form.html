@@ -1,0 +1,84 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} — RPT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'life_dashboard' %}" class="text-decoration-none small">&larr; Back to Life Situations</a>
+  <h2 class="mt-1">{{ title }}</h2>
+</div>
+
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="post" id="life-event-form">
+          {% csrf_token %}
+
+          {{ form.event_type|as_crispy_field }}
+
+          <div id="dependent-section">
+            {{ form.dependent|as_crispy_field }}
+            {{ form.dependent_age_at_event|as_crispy_field }}
+          </div>
+
+          <div id="household-section" style="display:none;">
+            {{ form.person|as_crispy_field }}
+            {{ form.event_year_override|as_crispy_field }}
+            {{ form.is_annual|as_crispy_field }}
+          </div>
+
+          {{ form.description|as_crispy_field }}
+          {{ form.estimated_cost|as_crispy_field }}
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'life_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4 mt-3 mt-lg-0">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold small">Event Type Guide</div>
+      <div class="card-body small text-muted">
+        <p class="mb-2"><strong>Dependent events</strong> — tied to a dependent's age:</p>
+        <ul class="mb-3">
+          <li><strong>Vehicle Purchase</strong> — car for a dependent</li>
+          <li><strong>Secondary Education</strong> — college tuition, etc.</li>
+          <li><strong>Leaves Household</strong> — move-out year</li>
+          <li><strong>Wedding</strong> — estimated wedding cost</li>
+          <li><strong>Other</strong> — any other dependent expense</li>
+        </ul>
+        <p class="mb-2"><strong>Household events</strong> — tied to a specific year:</p>
+        <ul class="mb-0">
+          <li><strong>Vacation / Travel</strong> — one-time or annual travel budget. Check <em>Annual</em> to add this cost every year from the event year onward in retirement projections.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var HOUSEHOLD_TYPES = ['vacation'];
+  var typeSelect = document.getElementById('id_event_type');
+  var depSection = document.getElementById('dependent-section');
+  var hhSection  = document.getElementById('household-section');
+
+  function updateSections() {
+    var isHousehold = HOUSEHOLD_TYPES.indexOf(typeSelect.value) !== -1;
+    depSection.style.display = isHousehold ? 'none' : '';
+    hhSection.style.display  = isHousehold ? '' : 'none';
+  }
+
+  typeSelect.addEventListener('change', updateSections);
+  updateSections();
+})();
+</script>
+{% endblock %}

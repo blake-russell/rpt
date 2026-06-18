@@ -1,0 +1,15 @@
+django>=6.0
+django-htmx
+django-crispy-forms
+crispy-bootstrap5
+yfinance
+requests
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+
+# Dev / CI
+ruff==0.15.17
+python-semantic-release

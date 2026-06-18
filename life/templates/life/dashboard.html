@@ -1,0 +1,92 @@
+{% extends "core/base.html" %}
+
+{% block title %}Life Situations — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">👨‍👩‍👧‍👦 Life Situations</h2>
+  <a href="{% url 'life_event_add' %}" class="btn btn-primary btn-sm">+ Add Life Event</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+        Dependents
+        <a href="{% url 'people_dashboard' %}" class="btn btn-outline-secondary btn-sm">Manage in People</a>
+      </div>
+      <div class="card-body p-0">
+        {% if dependents %}
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Move Out</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dep in dependents %}
+            <tr>
+              <td>{{ dep.name }}</td>
+              <td>{{ dep.current_age|default:"—" }}</td>
+              <td>{% if dep.move_out_age %}{{ dep.move_out_age }}{% if dep.birth_year %} ({{ dep.birth_year|add:dep.move_out_age }}){% endif %}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted small">No dependents. <a href="{% url 'people_dashboard' %}">Add in People →</a></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-semibold">Timeline (All Life Events)</div>
+      <div class="card-body p-0">
+        {% if timeline %}
+        <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Who</th>
+              <th>Type</th>
+              <th>Details</th>
+              <th class="text-end">Cost</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in timeline %}
+            <tr>
+              <td>{{ event.event_year|default:"—" }}</td>
+              <td>{{ event.owner_name }}</td>
+              <td>
+                {{ event.get_event_type_display }}
+                {% if event.is_annual %}<span class="badge bg-info text-dark ms-1" title="Repeats every year">↺ Annual</span>{% endif %}
+              </td>
+              <td class="text-muted small">
+                {% if event.dependent_age_at_event is not None %}Age {{ event.dependent_age_at_event }}{% endif %}
+                {% if event.description %}<em>{{ event.description }}</em>{% endif %}
+              </td>
+              <td class="text-end">{% if event.estimated_cost %}${{ event.estimated_cost|floatformat:0 }}{% if event.is_annual %}/yr{% endif %}{% else %}—{% endif %}</td>
+              <td class="text-end">
+                <a href="{% url 'life_event_edit' event.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                <a href="{% url 'life_event_delete' event.pk %}" class="btn btn-outline-danger btn-sm">✕</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="p-3 text-muted small">No life events yet. <a href="{% url 'life_event_add' %}">Add one →</a></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

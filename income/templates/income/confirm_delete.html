@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+
+{% block title %}Confirm Delete — RPT{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-5">
+    <div class="card border-danger border-0 shadow-sm">
+      <div class="card-header bg-danger text-white">Confirm Delete</div>
+      <div class="card-body">
+        <p>Are you sure you want to delete <strong>{{ obj }}</strong>?</p>
+        <p class="text-muted small">This action cannot be undone.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{{ cancel_url }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

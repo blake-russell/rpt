@@ -1,0 +1,278 @@
+{% extends "core/base.html" %}
+
+{% block title %}Assets — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">📈 Assets</h2>
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'refresh_prices' %}" id="refresh-form">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm" id="refresh-btn">🔄 Refresh Prices</button>
+    </form>
+    <a href="{% url 'account_add' %}" class="btn btn-primary btn-sm">+ Add Account</a>
+  </div>
+</div>
+
+<!-- Portfolio Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Market Value</p>
+        <h4 class="text-success mb-0">{% if total_value is not None %}${{ total_value|floatformat:0 }}{% else %}<span class="text-muted fs-6">No prices yet</span>{% endif %}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Cost Basis</p>
+        <h4 class="mb-0">${{ total_basis|floatformat:0 }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Gain / Loss</p>
+        {% if gain_loss is not None %}
+          <h4 class="mb-0 {% if gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if gain_loss >= 0 %}+{% endif %}${{ gain_loss|floatformat:0 }}
+          </h4>
+        {% else %}
+          <h4 class="mb-0 text-muted fs-6">—</h4>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Monthly Contributions</p>
+        <h4 class="text-info mb-0">${{ total_monthly|floatformat:0 }}<span class="text-muted small fw-normal">/mo</span></h4>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% for account in accounts %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      {{ account.name }}
+      <span class="badge bg-secondary ms-1">{{ account.get_account_type_display }}</span>
+      {% if account.institution %}<span class="text-muted small fw-normal ms-2">{{ account.institution }}</span>{% endif %}
+    </span>
+    <div class="d-flex gap-2">
+      <a href="{% url 'account_edit' account.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+      <a href="{% url 'account_delete' account.pk %}" class="btn btn-outline-danger btn-sm">Remove</a>
+    </div>
+  </div>
+  <div class="card-body">
+
+    <!-- Account summary row -->
+    <div class="row g-2 mb-3 text-center">
+      <div class="col-4">
+        <div class="bg-body-secondary rounded p-2 small">
+          <div class="text-muted" style="font-size:.7rem;">Market Value</div>
+          <div class="fw-semibold">{% if account.total_value is not None %}${{ account.total_value|floatformat:0 }}{% else %}—{% endif %}</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="bg-body-secondary rounded p-2 small">
+          <div class="text-muted" style="font-size:.7rem;">Cost Basis</div>
+          <div class="fw-semibold">${{ account.total_cost_basis|floatformat:0 }}</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="bg-body-secondary rounded p-2 small">
+          <div class="text-muted" style="font-size:.7rem;">Monthly Contrib.</div>
+          <div class="fw-semibold">${{ account.monthly_contribution_total|floatformat:0 }}/mo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Holdings -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">Holdings</h6>
+      <a href="{% url 'holding_add' account.pk %}" class="btn btn-outline-primary btn-sm">+ Add Holding</a>
+    </div>
+    {% if account.holdings.all %}
+    <div class="table-responsive mb-3">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Name</th><th>Shares</th>
+            <th>Avg Cost</th><th>Last Price</th>
+            <th>Market Value</th><th>Gain / Loss</th>
+            <th>Updated</th><th>Contributions</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in account.holdings.all %}
+          <tr>
+            <td class="fw-semibold">{{ h.ticker }}</td>
+            <td class="text-muted small">{{ h.name|default:"—" }}</td>
+            <td>{{ h.shares }}</td>
+            <td>${{ h.avg_cost_basis }}</td>
+            <td>{% if h.last_price %}${{ h.last_price }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>{% if h.current_value is not None %}<strong>${{ h.current_value|floatformat:0 }}</strong>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>
+              {% if h.gain_loss is not None %}
+                <span class="{% if h.gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                  {% if h.gain_loss >= 0 %}+{% endif %}${{ h.gain_loss|floatformat:0 }}
+                  {% if h.gain_loss_pct is not None %}
+                    <small>({% if h.gain_loss_pct >= 0 %}+{% endif %}{{ h.gain_loss_pct|floatformat:1 }}%)</small>
+                  {% endif %}
+                </span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td class="text-muted small">{% if h.last_price_updated %}{{ h.last_price_updated|date:"M d H:i" }}{% else %}—{% endif %}</td>
+            <td>
+              {% for c in h.contributions.all %}
+                <span class="badge bg-info text-dark">${{ c.monthly_amount|floatformat:0 }}/mo
+                  <a href="{% url 'contribution_edit' c.pk %}" class="text-dark ms-1" title="Edit">✏️</a>
+                  <a href="{% url 'contribution_delete' c.pk %}" class="text-dark ms-1" title="Delete">✕</a>
+                </span>
+              {% endfor %}
+              <a href="{% url 'contribution_add' h.pk %}" class="btn btn-outline-secondary btn-sm" style="font-size:.7rem;padding:1px 6px;" title="Add monthly contribution to {{ h.ticker }}">+ Contrib</a>
+            </td>
+            <td class="text-end">
+              <a href="{% url 'holding_edit' h.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+              <a href="{% url 'holding_delete' h.pk %}" class="btn btn-outline-danger btn-sm">✕</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted small mb-3">No holdings yet.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">No accounts yet. <a href="{% url 'account_add' %}">Add your first account.</a></div>
+{% endfor %}
+
+<!-- Price refresh loading overlay -->
+<div id="refresh-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="background:#1a1a2e; border:1px solid #334; border-radius:12px; padding:40px 52px; text-align:center; min-width:320px;">
+    <canvas id="candle-canvas" width="200" height="80" style="display:block; margin:0 auto 20px;"></canvas>
+    <div style="color:#e2e8f0; font-size:1.1rem; font-weight:600; margin-bottom:6px;">Refreshing Prices</div>
+    <div style="color:#94a3b8; font-size:.85rem;">Fetching live quotes from yfinance…</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById('refresh-form');
+  var overlay = document.getElementById('refresh-overlay');
+  var canvas = document.getElementById('candle-canvas');
+
+  if (!form || !overlay || !canvas) return;
+
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var NUM = 7;
+  var candles = [];
+  var frame;
+
+  function randBetween(a, b) { return a + Math.random() * (b - a); }
+
+  function initCandles() {
+    candles = [];
+    var colW = W / NUM;
+    for (var i = 0; i < NUM; i++) {
+      candles.push({
+        x: i * colW + colW * 0.2,
+        w: colW * 0.6,
+        // base body dimensions
+        midY: randBetween(22, H - 22),
+        baseBodyH: randBetween(14, 30),
+        isUp: Math.random() > 0.4,
+        // independent oscillator per candle
+        bodyPhase: Math.random() * Math.PI * 2,
+        bodySpeed: randBetween(1.2, 2.4),
+        wickPhase: Math.random() * Math.PI * 2,
+        wickSpeed: randBetween(1.8, 3.2),
+        // random flip timer
+        nextFlip: randBetween(1.5, 4.0),
+        lastFlipT: 0,
+        // glow pulse
+        glowPhase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  function drawCandles(t) {
+    ctx.clearRect(0, 0, W, H);
+
+    // subtle grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (var gy = 0; gy < H; gy += 20) {
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+    }
+
+    candles.forEach(function (c) {
+      // flip bull↔bear on timer
+      if (t - c.lastFlipT > c.nextFlip) {
+        c.isUp = !c.isUp;
+        c.lastFlipT = t;
+        c.nextFlip = randBetween(1.2, 3.5);
+      }
+
+      var color  = c.isUp ? '#22c55e' : '#ef4444';
+      var glow   = c.isUp ? 'rgba(34,197,94,'  : 'rgba(239,68,68,';
+
+      // pulse body height (breathes in and out)
+      var bodyH  = c.baseBodyH + Math.sin(t * c.bodySpeed + c.bodyPhase) * (c.baseBodyH * 0.55);
+      var bodyY  = c.midY - bodyH / 2;
+
+      // wicks stretch independently
+      var wickExtra = 6 + Math.abs(Math.sin(t * c.wickSpeed + c.wickPhase)) * 10;
+      var wickTop    = bodyY - wickExtra;
+      var wickBot    = bodyY + bodyH + wickExtra;
+
+      var cx = c.x + c.w / 2;
+
+      // glow
+      var alpha = 0.12 + 0.10 * Math.abs(Math.sin(t * 1.5 + c.glowPhase));
+      ctx.shadowColor  = glow + alpha + ')';
+      ctx.shadowBlur   = 12;
+
+      // wick
+      ctx.strokeStyle  = color;
+      ctx.lineWidth    = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, wickTop);
+      ctx.lineTo(cx, wickBot);
+      ctx.stroke();
+
+      // body with gradient
+      var grad = ctx.createLinearGradient(c.x, bodyY, c.x, bodyY + bodyH);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, c.isUp ? '#16a34a' : '#b91c1c');
+      ctx.fillStyle    = grad;
+      ctx.fillRect(c.x, bodyY, c.w, Math.max(bodyH, 2));
+
+      ctx.shadowBlur   = 0;
+    });
+
+    frame = requestAnimationFrame(function (ts) { drawCandles(ts / 1000); });
+  }
+
+  form.addEventListener('submit', function () {
+    initCandles();
+    overlay.style.display = 'flex';
+    requestAnimationFrame(function (ts) { drawCandles(ts / 1000); });
+  });
+})();
+</script>
+{% endblock %}

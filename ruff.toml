@@ -1,0 +1,17 @@
+target-version = "py313"
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501", # line too long - enforced by formatter, not checker
+]
+
+[lint.per-file-ignores]
+# Migrations are auto-generated; skip all lint rules
+"*/migrations/*.py" = ["E", "F", "W", "I"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

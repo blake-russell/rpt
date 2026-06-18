@@ -1,0 +1,85 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Budget Exclusion Rules — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">🚫 Budget Exclusion Rules</h2>
+  <a href="{% url 'budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Budget</a>
+</div>
+
+<div class="alert alert-info small">
+  Use exclusions for internal transfers and investment movements that should not count as spending.
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">{% if editing %}Edit Rule: {{ editing.name }}{% else %}Add Rule{% endif %}</div>
+      <div class="card-body">
+        <form method="post" {% if editing %}action="{% url 'budget_exclusion_rule_edit' editing.pk %}"{% endif %}>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">{% if editing %}Update Rule{% else %}Save Rule{% endif %}</button>
+            {% if editing %}<a href="{% url 'budget_exclusion_rules' %}" class="btn btn-outline-secondary btn-sm">Cancel</a>{% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-body">
+        <form method="post" action="{% url 'budget_apply_exclusions' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-warning btn-sm w-100">Apply Rules to Existing Transactions</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Existing Rules</div>
+      <div class="card-body p-0">
+        {% if rules %}
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description Contains</th>
+              <th>Source</th>
+              <th>Amount</th>
+              <th>Note</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rule in rules %}
+            <tr {% if editing and editing.pk == rule.pk %}class="table-warning"{% endif %}>
+              <td>{{ rule.name }}</td>
+              <td><code>{{ rule.description_contains }}</code></td>
+              <td>{{ rule.get_source_display|default:"All Sources" }}</td>
+              <td><span class="badge bg-secondary">{{ rule.get_amount_direction_display }}</span></td>
+              <td>{{ rule.note|default:"—" }}</td>
+              <td>{% if rule.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+              <td class="text-end d-flex gap-1 justify-content-end">
+                <a href="{% url 'budget_exclusion_rule_edit' rule.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                <form method="post" action="{% url 'budget_exclusion_rule_delete' rule.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted small">No exclusion rules yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

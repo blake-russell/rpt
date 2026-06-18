@@ -1,0 +1,164 @@
+﻿{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Income — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">💰 Income</h2>
+  <a href="{% url 'people_dashboard' %}" class="btn btn-outline-secondary btn-sm">👤 Manage People</a>
+</div>
+
+<!-- Household Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Base Salary</p>
+        <h4 class="text-success mb-0">${{ total_salary|floatformat:0 }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Avg Annual Bonuses</p>
+        <h4 class="text-info mb-0">${{ total_bonus|floatformat:0 }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Household Income</p>
+        <h4 class="mb-0">${{ total_income|floatformat:0 }}</h4>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- User / Spouse income cards -->
+{% for person in earners %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      {{ person.name }}
+      <span class="badge bg-secondary">{{ person.get_role_display }}</span>
+      {% if person.current_age is not None %}<span class="text-muted small fw-normal ms-2">Age {{ person.current_age }}</span>{% endif %}
+      {% if person.life_expectancy_age %}<span class="text-muted small fw-normal ms-1">· Life expectancy age {{ person.life_expectancy_age }} ({{ person.life_expectancy_year }})</span>{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+
+    <!-- W2 Incomes -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">W2 Income</h6>
+      <a href="{% url 'w2_add' %}?person={{ person.pk }}" class="btn btn-outline-primary btn-sm">+ Add W2</a>
+    </div>
+    {% if person.w2_incomes.all %}
+    <table class="table table-sm mb-3">
+      <thead><tr><th>Employer</th><th>Annual Salary</th><th>Effective Date</th><th>Current</th><th>Bonuses</th><th></th></tr></thead>
+      <tbody>
+        {% for w2 in person.w2_incomes.all %}
+        <tr>
+          <td>{{ w2.employer }}</td>
+          <td>${{ w2.annual_salary|floatformat:0 }}</td>
+          <td>{{ w2.effective_date }}</td>
+          <td>{% if w2.is_current %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+          <td>
+            {% for bonus in w2.bonuses.all %}
+              <span class="badge bg-info text-dark me-1">
+                {% if bonus.bonus_type == 'flat' %}${{ bonus.amount|floatformat:0 }}{% else %}{{ bonus.amount }}%{% endif %}
+                {% if bonus.description %}({{ bonus.description }}){% endif %}
+              </span>
+            {% empty %}<span class="text-muted small">—</span>{% endfor %}
+            <a href="{% url 'bonus_add' %}?w2={{ w2.pk }}" class="btn btn-outline-secondary btn-sm ms-1" style="font-size:.7rem;padding:1px 6px;">+ Bonus</a>
+          </td>
+          <td class="text-end">
+            <a href="{% url 'w2_edit' w2.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'w2_delete' w2.pk %}" class="btn btn-outline-danger btn-sm">✕</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted small mb-3">No W2 income entries yet.</p>
+    {% endif %}
+
+    <!-- Raise Schedules -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">Raise Schedule</h6>
+      <a href="{% url 'raise_add' %}?person={{ person.pk }}" class="btn btn-outline-primary btn-sm">+ Add Raise</a>
+    </div>
+    {% if person.raise_schedules.all %}
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Type</th><th>Details</th><th></th></tr></thead>
+      <tbody>
+        {% for rs in person.raise_schedules.all %}
+        <tr>
+          <td>{{ rs.get_raise_type_display }}</td>
+          <td>
+            {% if rs.raise_type == 'annual_pct' %}{{ rs.annual_pct }}% per year
+            {% else %}${{ rs.one_time_amount|floatformat:0 }} in {{ rs.one_time_year }}{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'raise_delete' rs.pk %}" class="btn btn-outline-danger btn-sm">✕</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted small mb-0">No raise schedules yet.</p>
+    {% endif %}
+
+    <!-- Social Security -->
+    <hr class="my-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">Social Security</h6>
+      <a href="{% url 'ss_edit' person.pk %}" class="btn btn-outline-primary btn-sm">
+        {% if person.social_security %}Edit{% else %}+ Add SS Estimates{% endif %}
+      </a>
+    </div>
+    {% if person.social_security %}
+    {% with ss=person.social_security %}
+    <div class="row g-2 text-center mb-1">
+      <div class="col-4">
+        <div class="border rounded p-2 small">
+          <div class="text-muted" style="font-size:.7rem;">Age 62</div>
+          <div class="fw-semibold">${{ ss.monthly_benefit_age_62|floatformat:0|default:"—" }}<span class="text-muted fw-normal">/mo</span></div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="border rounded p-2 small">
+          <div class="text-muted" style="font-size:.7rem;">Full Ret. Age</div>
+          <div class="fw-semibold">${{ ss.monthly_benefit_fra|floatformat:0|default:"—" }}<span class="text-muted fw-normal">/mo</span></div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="border rounded p-2 small">
+          <div class="text-muted" style="font-size:.7rem;">Age 70</div>
+          <div class="fw-semibold">${{ ss.monthly_benefit_age_70|floatformat:0|default:"—" }}<span class="text-muted fw-normal">/mo</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="small text-muted mb-0 mt-1">
+      Planning to claim at <strong>age {{ ss.planned_claim_age }}</strong>
+      {% if ss.planned_claim_year %}({{ ss.planned_claim_year }}){% endif %}
+      — estimated
+      <strong>${{ ss.planned_monthly_benefit|floatformat:0|default:"—" }}/mo</strong>
+      (${{ ss.annual_benefit|floatformat:0|default:"—" }}/yr).
+      <a href="{% url 'ss_delete' person.pk %}" class="text-danger ms-2">Remove</a>
+    </p>
+    {% endwith %}
+    {% else %}
+    <p class="text-muted small mb-0">No Social Security estimates entered yet.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">No earners added yet. <a href="{% url 'people_dashboard' %}">Add people first</a>, then return here to add income.</div>
+{% endfor %}
+{% endblock %}

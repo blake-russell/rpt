@@ -1,0 +1,51 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} — RPT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'income_dashboard' %}" class="text-decoration-none small">&larr; Back to Income</a>
+  <h2 class="mt-1">{{ title }}</h2>
+</div>
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Enter the benefit estimates from your <strong>ssa.gov</strong> statement.
+          All three amounts are in <em>today's dollars</em> as reported by SSA.
+          The retirement projection will apply the appropriate inflation adjustment.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          {# person field is hidden — pre-set by the URL #}
+          <div style="display:none;">{{ form.person }}</div>
+          {{ form.monthly_benefit_age_62|as_crispy_field }}
+          {{ form.monthly_benefit_fra|as_crispy_field }}
+          {{ form.monthly_benefit_age_70|as_crispy_field }}
+          <hr class="my-3">
+          {{ form.planned_claim_age|as_crispy_field }}
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'income_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 mt-3 mt-lg-0">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold small">Where to find these numbers</div>
+      <div class="card-body small text-muted">
+        <ol class="ps-3 mb-0">
+          <li class="mb-1">Go to <strong>ssa.gov/myaccount</strong> and log in</li>
+          <li class="mb-1">Click <em>"Review your full earnings record"</em> or <em>"Estimated Benefits"</em></li>
+          <li class="mb-1">Note the three monthly amounts shown for ages 62, FRA, and 70</li>
+          <li>Enter them here — all in today's dollars as shown on the statement</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

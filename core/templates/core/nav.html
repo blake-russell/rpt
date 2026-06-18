@@ -1,0 +1,29 @@
+<nav class="nav flex-column gap-1">
+  <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+    &#x1F3E0; Dashboard
+  </a>
+  <a href="/people/" class="nav-link">
+    &#x1F464; People
+  </a>
+  <a href="/income/" class="nav-link">
+    &#x1F4B0; Income
+  </a>
+  <a href="/assets/" class="nav-link">
+    &#x1F4C8; Assets
+  </a>
+  <a href="/debts/" class="nav-link">
+    &#x1F3E6; Debts
+  </a>
+  <a href="/life/" class="nav-link">
+    &#x1F46A; Life &amp; Events
+  </a>
+  <a href="/budget/" class="nav-link">
+    &#x1F4CA; Budget
+  </a>
+  <a href="/retirement/" class="nav-link">
+    &#x1F3D6;&#xFE0F; Retirement
+  </a>
+  <a href="/ai-insights/" class="nav-link">
+    &#x1F916; AI Insights
+  </a>
+</nav>

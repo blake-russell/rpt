@@ -1,0 +1,27 @@
+<div class="table-responsive mt-2" style="max-height:320px;overflow-y:auto;">
+  <table class="table table-sm table-striped" style="font-size:.8rem;">
+    <thead class="table-dark sticky-top">
+      <tr>
+        <th>Date</th>
+        <th>Payment</th>
+        <th>Principal</th>
+        <th>Interest</th>
+        <th>Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in schedule %}
+      <tr>
+        <td>{{ row.date|date:"M Y" }}</td>
+        <td>${{ row.payment|floatformat:2 }}</td>
+        <td class="text-success">${{ row.principal|floatformat:2 }}</td>
+        <td class="text-danger">${{ row.interest|floatformat:2 }}</td>
+        <td>${{ row.balance|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted text-center">No future payments — loan may be paid off.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-muted small mt-1">{{ schedule|length }} payment(s) remaining.</p>

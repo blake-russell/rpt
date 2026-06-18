@@ -1,0 +1,92 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} — RPT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'debts_dashboard' %}" class="text-decoration-none small">&larr; Back to Debts</a>
+  <h2 class="mt-1">{{ title }}</h2>
+</div>
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="post" id="loan-form">
+          {% csrf_token %}
+          {{ form.loan_type|as_crispy_field }}
+          {{ form.description|as_crispy_field }}
+
+          <div id="realestate-field" style="display:none;">
+            {{ form.property_estimated_value|as_crispy_field }}
+            {{ form.expected_home_value_growth_pct|as_crispy_field }}
+            {{ form.is_primary_residence|as_crispy_field }}
+          </div>
+
+          <div id="mortgage-escrow-field" style="display:none;">
+            <hr class="my-3">
+            <h6 class="text-muted text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">Mortgage Escrow Information</h6>
+            {{ form.is_escrowed|as_crispy_field }}
+            <div id="escrow-amounts" style="display:none;">
+              {{ form.homeowners_insurance_yearly|as_crispy_field }}
+              {{ form.real_estate_tax_yearly|as_crispy_field }}
+            </div>
+          </div>
+
+          <div id="car-insurance-field" style="display:none;">
+            <hr class="my-3">
+            <h6 class="text-muted text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">Car Insurance</h6>
+            {{ form.car_insurance_yearly|as_crispy_field }}
+          </div>
+
+          <hr class="my-3">
+          <h6 class="text-muted text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">Loan Details</h6>
+          {{ form.original_balance|as_crispy_field }}
+          {{ form.current_balance|as_crispy_field }}
+          {{ form.interest_rate_pct|as_crispy_field }}
+          {{ form.origination_date|as_crispy_field }}
+          {{ form.maturity_date|as_crispy_field }}
+          {{ form.monthly_payment|as_crispy_field }}
+          {{ form.is_active|as_crispy_field }}
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'debts_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var loanType = document.getElementById('id_loan_type');
+    var reField = document.getElementById('realestate-field');
+    var mortgageEscrowField = document.getElementById('mortgage-escrow-field');
+    var carInsuranceField = document.getElementById('car-insurance-field');
+    var isEscrowed = document.getElementById('id_is_escrowed');
+    var escrowAmounts = document.getElementById('escrow-amounts');
+    
+    function update() {
+      var type = loanType.value;
+      reField.style.display = type === 'mortgage' ? '' : 'none';
+      mortgageEscrowField.style.display = type === 'mortgage' ? '' : 'none';
+      carInsuranceField.style.display = type === 'car' ? '' : 'none';
+      
+      // Show escrow amounts only if escrowed checkbox is checked
+      if (type === 'mortgage' && isEscrowed) {
+        escrowAmounts.style.display = isEscrowed.checked ? '' : 'none';
+      }
+    }
+    
+    loanType.addEventListener('change', update);
+    if (isEscrowed) {
+      isEscrowed.addEventListener('change', update);
+    }
+    update();
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Budget Categories — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">🏷️ Budget Categories</h2>
+  <a href="{% url 'budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Budget</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Add Category</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <button type="submit" class="btn btn-primary btn-sm">Save Category</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Existing Categories</div>
+      <div class="card-body p-0">
+        {% if categories %}
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr><th>Name</th><th>Color</th><th>Debt Service</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for category in categories %}
+            <tr>
+              <td>{{ category.name }}</td>
+              <td>
+                <span class="badge" style="background: {{ category.color_hex }}">{{ category.color_hex }}</span>
+              </td>
+              <td>{% if category.is_debt_service %}<span class="badge bg-warning text-dark">Yes</span>{% else %}—{% endif %}</td>
+              <td class="text-end">
+                <a href="{% url 'budget_category_edit' category.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                <a href="{% url 'budget_category_delete' category.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted small">No categories yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}Retirement — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">🏖️ Retirement Projections</h2>
+</div>
+
+{% if hints %}
+<div class="alert alert-warning small mb-3">
+  <strong>⚠️ Setup required for accurate projections:</strong>
+  <ul class="mb-0 mt-2">
+    {% for module, url, text in hints %}
+    <li><a href="{{ url }}" class="alert-link">{{ module }}</a> — {{ text }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="alert alert-secondary small">
+  <strong>Auto-derived projection parameters:</strong>
+  {% if derived_info %}
+  <ul class="mb-0 mt-1">
+    {% for info in derived_info %}
+    <li>{{ info }}</li>
+    {% endfor %}
+    <li>Projection end: {{ life_expectancy_year }} (latest life expectancy across household)</li>
+    <li>Income baseline: {% if settings_form.instance.use_budget_cashflow_for_income %}Budget rolling average (from <a href="/budget/" class="alert-link">Budget module</a>){% else %}W2 income projections{% endif %}</li>
+    <li>Debt service: auto-calculated from <a href="/debts/" class="alert-link">Debts module</a>, falls off at each loan payoff date</li>
+    <li>Non-primary investment real estate equity is automatically included in assets</li>
+  </ul>
+  {% else %}
+  No person profiles found — <a href="/income/" class="alert-link">add persons in the Income module</a> to auto-derive retirement and life expectancy years.
+  {% endif %}
+  <div class="mt-2 text-muted">To adjust retirement age or life expectancy, update person profiles in the <a href="/income/" class="alert-link">Income module</a>.</div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-semibold">Retirement Settings</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_name" value="settings">
+          {{ settings_form|crispy }}
+          <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-semibold">Retirement Cashflow View (Bar + Line)</div>
+      <div class="card-body">
+        <canvas id="retirementChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <details class="mb-3">
+      <summary class="btn btn-outline-secondary btn-sm">📊 Payoff Scenario: Early Payoff vs Invest</summary>
+      <div class="card border-0 shadow-sm mt-2">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-lg-4">
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_name" value="payoff">
+                {{ payoff_form|crispy }}
+                <button type="submit" class="btn btn-outline-primary btn-sm">Run Scenario</button>
+              </form>
+            </div>
+            {% if payoff_result %}
+            <div class="col-lg-6">
+              <div class="small mt-2">
+                <div class="mb-1"><strong>Accelerated Payment:</strong> ${{ payoff_result.accelerated_payment|floatformat:2|intcomma }}/mo</div>
+                <div class="mb-1"><strong>Interest Saved:</strong> ${{ payoff_result.interest_saved|floatformat:2|intcomma }}</div>
+                <div class="mb-1"><strong>Invested Value (@ {{ payoff_result.versus_return_pct }}%):</strong> ${{ payoff_result.invested_value|floatformat:2|intcomma }}</div>
+                <div><strong>Net Difference:</strong> <span class="{% if payoff_result.net_difference >= 0 %}text-success{% else %}text-danger{% endif %}">${{ payoff_result.net_difference|floatformat:2|intcomma }}</span></div>
+                <div class="text-muted mt-1 small">Negative = investing outperformed early payoff.</div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Projection Table</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 align-middle" style="font-size:.82rem;">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Income</th>
+                <th>Expenses<br><small class="text-muted">(Total)</small></th>
+                <th>Expenses<br><small class="text-muted">(CPI)</small></th>
+                <th>Debt Svc<br><small class="text-muted">(Fixed)</small></th>
+                <th>Fed. Tax<br><small class="text-muted" title="Federal income tax on pre-tax withdrawals + taxable SS. Deducted from assets same year.">ⓘ</small></th>
+                <th>From Assets<br><small class="text-muted">(Withdrawals + Tax)</small></th>
+                <th>Assets<br><small class="text-muted">(Pre-Tax)</small></th>
+                <th>Assets<br><small class="text-muted">(Post-Tax / Roth)</small></th>
+                <th>Debt Bal.</th>
+                <th>Net Worth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in projection_rows %}
+              {% if row.is_shortfall %}
+              <tr class="table-danger text-dark">
+              {% elif row.year == retirement_year or row.year == spouse_retirement_year %}
+              <tr class="table-warning text-dark">
+              {% else %}
+              <tr>
+              {% endif %}
+                <td>
+                  <span {% if row.year_tooltip %}data-bs-toggle="tooltip" data-bs-html="true" title="{{ row.year_tooltip }}"{% endif %} style="cursor:default; border-bottom: 1px dotted; text-decoration: none;">{{ row.year }}</span>
+                </td>
+                <td>
+                  ${{ row.household_income|floatformat:0|intcomma }}
+                  {% if row.ss_income > 0 %}<br><small style="color:inherit !important; opacity:.7;">SS: ${{ row.ss_income|floatformat:0|intcomma }}</small>{% endif %}
+                </td>
+                <td class="fw-semibold">
+                  ${{ row.total_expenses|floatformat:0|intcomma }}{% if row.life_event_details %}<sup class="text-danger" data-bs-toggle="tooltip" data-bs-html="true" title="{% for e in row.life_event_details %}{{ e.label }}{% if e.amount %}: ${{ e.amount|floatformat:0 }}{% endif %}{% if not forloop.last %} &#10;{% endif %}{% endfor %}">*</sup>{% endif %}
+                </td>
+                <td style="color:inherit !important;" title="Budget baseline + escrowed costs: ${{ row.escrowed_costs|floatformat:0|intcomma }}">${{ row.consumer_expenses|floatformat:0|intcomma }}</td>
+                <td style="color:inherit !important;">
+                  {% if row.debt_service > 0 %}
+                    ${{ row.debt_service|floatformat:0|intcomma }}{% if row.debt_payoff_names %}<sup class="text-danger" data-bs-toggle="tooltip" title="Paid off: {{ row.debt_payoff_names|join:', ' }}">*</sup>{% endif %}
+                  {% else %}
+                    <span class="text-success" {% if row.debt_payoff_names %}data-bs-toggle="tooltip" title="Paid off: {{ row.debt_payoff_names|join:', ' }}"{% endif %}>$0{% if row.debt_payoff_names %} ✓{% endif %}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.income_tax > 0 %}
+                    <span data-bs-toggle="tooltip" title="Federal income tax deducted from assets this year. Taxable SS: ${{ row.taxable_ss|floatformat:0|intcomma }} | Pre-tax withdrawals: ${{ row.pre_tax_withdrawal|floatformat:0|intcomma }}">${{ row.income_tax|floatformat:0|intcomma }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                <td>
+                  {% if row.total_from_assets > 0 %}
+                    ${{ row.total_from_assets|floatformat:0|intcomma }}
+                    <br><small style="color:inherit !important; opacity:.7;">Wdl: {{ row.required_withdrawals|floatformat:0|intcomma }} + Tax: {{ row.income_tax|floatformat:0|intcomma }}</small>
+                  {% else %}—{% endif %}
+                </td>
+                <td>{% if row.pre_tax_assets < 0 %}<span class="text-danger fw-semibold">${{ row.pre_tax_assets|floatformat:0|intcomma }}</span>{% else %}${{ row.pre_tax_assets|floatformat:0|intcomma }}{% endif %}</td>
+                <td>{% if row.post_tax_assets < 0 %}<span class="text-danger fw-semibold">${{ row.post_tax_assets|floatformat:0|intcomma }}</span>{% else %}${{ row.post_tax_assets|floatformat:0|intcomma }}{% endif %}</td>
+                <td>${{ row.total_debt|floatformat:0|intcomma }}</td>
+                <td class="fw-semibold">${{ row.net_worth|floatformat:0|intcomma }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent fw-semibold">Major Timeline Events</div>
+  <div class="card-body">
+    {% if event_markers %}
+      <div class="d-flex flex-wrap gap-2">
+        {% for marker in event_markers %}
+          <span class="badge text-bg-light border">{{ marker.year }}: {{ marker.label }}</span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-muted small">No major events available yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+{{ chart_years|json_script:"ret-years" }}
+{{ chart_assets|json_script:"ret-assets" }}
+{{ chart_debts|json_script:"ret-debts" }}
+{{ chart_net_worth|json_script:"ret-net" }}
+{{ cashflow_years|json_script:"ret-cf-years" }}
+{{ cashflow_income|json_script:"ret-cf-income" }}
+{{ cashflow_withdrawals|json_script:"ret-cf-withdrawals" }}
+{{ cashflow_expenses|json_script:"ret-cf-expenses" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Initialize Bootstrap tooltips for this page
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+    new bootstrap.Tooltip(el, { trigger: 'hover' });
+  });
+</script>
+<script>
+  (function() {
+    var years = JSON.parse(document.getElementById('ret-cf-years').textContent || '[]');
+    var incomeBars = JSON.parse(document.getElementById('ret-cf-income').textContent || '[]');
+    var withdrawalBars = JSON.parse(document.getElementById('ret-cf-withdrawals').textContent || '[]');
+    var expenseLine = JSON.parse(document.getElementById('ret-cf-expenses').textContent || '[]');
+    var canvas = document.getElementById('retirementChart');
+    if (!canvas || !years.length) {
+      return;
+    }
+
+    var retirementYear = {{ retirement_year }};
+
+    function formatCurrency(v) {
+      return '$' + Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: years,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Income',
+            data: incomeBars,
+            backgroundColor: '#198754',
+            stack: 'cashflow',
+            yAxisID: 'y',
+            order: 2,
+          },
+          {
+            type: 'bar',
+            label: 'Withdrawals from Savings',
+            data: withdrawalBars,
+            backgroundColor: '#0d6efd',
+            stack: 'cashflow',
+            yAxisID: 'y',
+            order: 2,
+          },
+          {
+            type: 'line',
+            label: 'Total Expenses',
+            data: expenseLine,
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            borderWidth: 3,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#dc3545',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1.5,
+            yAxisID: 'y1',
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': ' + formatCurrency(context.raw);
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            position: 'left',
+            title: { display: true, text: 'Cashflow ($)' },
+            ticks: {
+              callback: function(value) {
+                return formatCurrency(value);
+              },
+            },
+          },
+          y1: {
+            position: 'right',
+            title: { display: true, text: 'Expenses ($)' },
+            ticks: {
+              callback: function(value) {
+                return formatCurrency(value);
+              },
+            },
+            grid: { drawOnChartArea: false },
+          },
+          x: {
+            ticks: {
+              callback: function(value, index) {
+                var y = years[index];
+                if (y === retirementYear) {
+                  return y + ' (Retire)';
+                }
+                return y;
+              },
+            },
+          },
+        },
+      },
+    });
+  })();
+</script>
+{% endblock %}

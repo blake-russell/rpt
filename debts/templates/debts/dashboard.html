@@ -1,0 +1,151 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Debts — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">🏦 Debts</h2>
+  <a href="{% url 'loan_add' %}" class="btn btn-primary btn-sm">+ Add Loan</a>
+</div>
+
+<div class="alert alert-info mb-4">
+  <strong>📌 Escrow & Insurance Notes:</strong>
+  <ul class="mb-0 mt-2">
+    <li><strong>Mortgages with Escrow:</strong> If your monthly payment includes homeowners insurance and property taxes, check "Is Escrowed" and enter the yearly amounts in each mortgage loan form. These costs will automatically continue in retirement projections after your mortgage is paid off.</li>
+    <li><strong>Mortgages without Escrow:</strong> If you pay insurance and taxes separately (not in your mortgage payment), leave "Is Escrowed" unchecked. Track those expenses in your Budget module instead.</li>
+    <li><strong>Car Loans:</strong> Enter yearly car insurance in each car loan form. This cost will continue in retirement projections after the loan is paid off.</li>
+  </ul>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Debt</p>
+        <h4 class="text-danger mb-0">${{ total_debt|floatformat:0 }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total Real Estate Equity</p>
+        <h4 class="text-success mb-0">${{ total_equity|floatformat:0 }}</h4>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% for type_label, loans in grouped.items %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header fw-semibold">{{ type_label }}</div>
+  <div class="card-body p-0">
+    {% for loan in loans %}
+    <div class="p-3 {% if not forloop.last %}border-bottom{% endif %}">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <strong>{{ loan.description }}</strong>
+          {% if loan.is_active %}<span class="badge bg-success ms-2">Active</span>{% else %}<span class="badge bg-secondary ms-2">Inactive</span>{% endif %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{% url 'loan_edit' loan.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+          <a href="{% url 'loan_delete' loan.pk %}" class="btn btn-outline-danger btn-sm">Remove</a>
+        </div>
+      </div>
+
+      <div class="row g-2 text-center mb-2">
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Current Balance</div>
+            <div class="fw-semibold text-danger">${{ loan.current_balance|floatformat:0 }}</div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Rate</div>
+            <div class="fw-semibold">{{ loan.interest_rate_pct }}%</div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Monthly Payment</div>
+            <div class="fw-semibold">${{ loan.monthly_payment|floatformat:0 }}</div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Payoff Date</div>
+            <div class="fw-semibold">{{ loan.maturity_date|date:"M Y" }}</div>
+          </div>
+        </div>
+        {% if loan.property_estimated_value %}
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Est. Value</div>
+            <div class="fw-semibold">${{ loan.property_estimated_value|floatformat:0 }}</div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Equity</div>
+            <div class="fw-semibold text-success">${{ loan.equity|floatformat:0 }}</div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="bg-body-secondary rounded p-2 small">
+            <div class="text-muted" style="font-size:.7rem;">Home Value YoY</div>
+            <div class="fw-semibold">{% if loan.expected_home_value_growth_pct is not None %}{{ loan.expected_home_value_growth_pct }}%{% else %}—{% endif %}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Escrow Information (Mortgage only) -->
+      {% if loan.loan_type == 'mortgage' and loan.is_escrowed %}
+      <div class="alert alert-light border mb-2 py-2 px-3">
+        <div class="small"><strong>Escrowed Costs (included in monthly payment):</strong></div>
+        <div class="row g-2 text-center mt-1">
+          <div class="col">
+            <div class="text-muted" style="font-size:.7rem;">Homeowners Insurance (Yearly)</div>
+            <div class="fw-semibold small">{% if loan.homeowners_insurance_yearly %}${{ loan.homeowners_insurance_yearly|floatformat:0 }}{% else %}—{% endif %}</div>
+          </div>
+          <div class="col">
+            <div class="text-muted" style="font-size:.7rem;">Real Estate Tax (Yearly)</div>
+            <div class="fw-semibold small">{% if loan.real_estate_tax_yearly %}${{ loan.real_estate_tax_yearly|floatformat:0 }}{% else %}—{% endif %}</div>
+          </div>
+        </div>
+        <div class="text-muted mt-1" style="font-size:.65rem;">These costs continue in retirement projections after mortgage payoff.</div>
+      </div>
+      {% endif %}
+
+      <!-- Car Insurance (Car loan only) -->
+      {% if loan.loan_type == 'car' and loan.car_insurance_yearly %}
+      <div class="alert alert-light border mb-2 py-2 px-3">
+        <div class="small"><strong>Car Insurance (Yearly):</strong> ${{ loan.car_insurance_yearly|floatformat:0 }}</div>
+        <div class="text-muted mt-1" style="font-size:.65rem;">This cost continues in retirement projections after loan payoff.</div>
+      </div>
+      {% endif %}
+
+      <!-- Amortization toggle -->
+      <div>
+        <button class="btn btn-outline-secondary btn-sm"
+                hx-get="{% url 'loan_amortization' loan.pk %}"
+                hx-target="#amort-{{ loan.pk }}"
+                hx-swap="innerHTML"
+                hx-indicator="#amort-spinner-{{ loan.pk }}"
+                onclick="this.style.display='none'">
+          📋 Show Amortization Schedule
+        </button>
+        <span id="amort-spinner-{{ loan.pk }}" class="htmx-indicator spinner-border spinner-border-sm ms-2"></span>
+        <div id="amort-{{ loan.pk }}" class="mt-2"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">No loans added yet. <a href="{% url 'loan_add' %}">Add your first loan.</a></div>
+{% endfor %}
+{% endblock %}

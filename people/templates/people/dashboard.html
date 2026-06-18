@@ -1,0 +1,97 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}People — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">👤 People</h2>
+  <a href="{% url 'person_add' %}" class="btn btn-primary btn-sm">+ Add Person</a>
+</div>
+
+<div class="alert alert-info small mb-4">
+  Manage all household members here. Add <strong>yourself</strong> (role: User) and your <strong>spouse</strong> first,
+  then add any <strong>dependents</strong>. Retirement and life planning modules pull from these profiles automatically.
+  Head to <a href="/income/" class="alert-link">Income</a> to add W2 wages and Social Security estimates after adding people.
+</div>
+
+<!-- User & Spouse cards -->
+{% if earners %}
+{% for person in earners %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      {{ person.name }}
+      <span class="badge bg-secondary ms-1">{{ person.get_role_display }}</span>
+      {% if person.current_age is not None %}<span class="text-muted small fw-normal ms-2">Age {{ person.current_age }}</span>{% endif %}
+    </span>
+    <div class="d-flex gap-2">
+      <a href="{% url 'person_edit' person.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+      <a href="{% url 'person_delete' person.pk %}" class="btn btn-outline-danger btn-sm">Remove</a>
+    </div>
+  </div>
+  <div class="card-body py-2">
+    <div class="row g-3 small">
+      <div class="col-auto">
+        <span class="text-muted">Born:</span>
+        {% if person.birth_month and person.birth_year %}{{ person.birth_month }}/{{ person.birth_year }}{% else %}<em class="text-muted">—</em>{% endif %}
+      </div>
+      <div class="col-auto">
+        <span class="text-muted">Retirement age:</span>
+        {% if person.retirement_age %}{{ person.retirement_age }}{% if person.birth_year %} ({{ person.birth_year|add:person.retirement_age }}){% endif %}{% else %}<em class="text-muted">—</em>{% endif %}
+      </div>
+      <div class="col-auto">
+        <span class="text-muted">Life expectancy age:</span>
+        {% if person.life_expectancy_age %}{{ person.life_expectancy_age }}{% if person.life_expectancy_year %} ({{ person.life_expectancy_year }}){% endif %}{% else %}<em class="text-muted">—</em>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="alert alert-warning">
+  No earners yet. <a href="{% url 'person_add' %}" class="alert-link">Add yourself</a> to get started.
+</div>
+{% endif %}
+
+<!-- Dependents -->
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+    👨‍👩‍👧 Dependents
+    <a href="{% url 'person_add' %}" class="btn btn-outline-primary btn-sm">+ Add Dependent</a>
+  </div>
+  <div class="card-body p-0">
+    {% if dependents %}
+    <table class="table table-sm mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Birth</th>
+          <th>Age</th>
+          <th>Driving Age</th>
+          <th>Move-Out Age</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for person in dependents %}
+        <tr>
+          <td>{{ person.name }}</td>
+          <td>{% if person.birth_month and person.birth_year %}{{ person.birth_month }}/{{ person.birth_year }}{% else %}—{% endif %}</td>
+          <td>{{ person.current_age|default:"—" }}</td>
+          <td>{% if person.driving_age %}{{ person.driving_age }}{% if person.birth_year %} ({{ person.birth_year|add:person.driving_age }}){% endif %}{% else %}—{% endif %}</td>
+          <td>{% if person.move_out_age %}{{ person.move_out_age }}{% if person.birth_year %} ({{ person.birth_year|add:person.move_out_age }}){% endif %}{% else %}—{% endif %}</td>
+          <td class="text-end">
+            <a href="{% url 'person_edit' person.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'person_delete' person.pk %}" class="btn btn-outline-danger btn-sm">✕</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-3 text-muted small">No dependents added yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

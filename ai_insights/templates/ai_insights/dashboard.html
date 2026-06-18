@@ -1,0 +1,44 @@
+{% extends "core/base.html" %}
+
+{% block title %}AI Insights — RPT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">🤖 AI Insights</h2>
+</div>
+
+<div class="row justify-content-center mt-5">
+  <div class="col-lg-6 text-center">
+    <div class="card border-0 shadow-sm py-5">
+      <div class="card-body">
+        <div style="font-size: 4rem; line-height: 1; margin-bottom: 1rem;">🤖</div>
+        <h3 class="fw-bold mb-2">Coming Soon</h3>
+        <p class="text-muted mb-4">
+          AI-powered insights for your retirement plan are on the way.<br>
+          This module will analyze your financial data and surface personalized recommendations,
+          risk assessments, and optimization opportunities using OpenRouter AI models.
+        </p>
+        <div class="d-flex flex-column gap-2 text-start mx-auto" style="max-width: 340px;">
+          <div class="d-flex align-items-center gap-2 small text-muted">
+            <span class="text-success fs-5">✓</span> Portfolio analysis &amp; diversification feedback
+          </div>
+          <div class="d-flex align-items-center gap-2 small text-muted">
+            <span class="text-success fs-5">✓</span> Retirement readiness score
+          </div>
+          <div class="d-flex align-items-center gap-2 small text-muted">
+            <span class="text-success fs-5">✓</span> Expense optimization suggestions
+          </div>
+          <div class="d-flex align-items-center gap-2 small text-muted">
+            <span class="text-success fs-5">✓</span> Tax-efficient withdrawal guidance
+          </div>
+        </div>
+        <div class="mt-4">
+          <a href="{% url 'settings' %}" class="btn btn-outline-primary btn-sm">
+            ⚙️ Configure API Key in Settings
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
