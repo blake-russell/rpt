@@ -1,7 +1,7 @@
 # RPT — Retirement Planning Tool
 
 [![CI](https://github.com/blake-russell/rpt/actions/workflows/ci.yml/badge.svg)](https://github.com/blake-russell/rpt/actions/workflows/ci.yml)
-[![Version](https://img.shield.io/badge/version-0.0.0-blue)](https://github.com/blake-russell/rpt/releases)
+[![Version](https://img.shields.io/github/v/release/blake-russell/rpt?label=version)](https://github.com/blake-russell/rpt/releases)
 
 A local-first, single-household web application for comprehensive retirement planning. RPT helps you track income, investments, debts, and expenses to project whether your retirement savings will last your lifetime — with full tax modeling, withdrawal strategy optimization, and life event planning.
 
