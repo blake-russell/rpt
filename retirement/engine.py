@@ -192,7 +192,10 @@ def _social_security_by_year(start_year, end_year, ss_cola_pct):
         base_benefit = _to_decimal(ss.annual_benefit)
         if not claim_year or base_benefit <= 0:
             continue
+        person_le_year = _person_life_expectancy_year(ss.person)
         for year in range(max(start_year, claim_year), end_year + 1):
+            if person_le_year and year > person_le_year:
+                break
             years_since_claim = year - claim_year
             inflated_benefit = base_benefit * ((Decimal("1") + cola) ** years_since_claim)
             result[year] += inflated_benefit
@@ -289,29 +292,34 @@ def build_projection(
 
     life_cost_map = {}
     life_event_details_map = {}  # year -> list of {label, amount}
+    cpi_rate = inflation_rate / Decimal("100")
     for event in LifeEvent.objects.select_related("dependent", "person").all():
         if not event.event_year or not event.estimated_cost:
             continue
         label = f"{event.owner_name} — {event.get_event_type_display()}"
-        cost = _to_decimal(event.estimated_cost)
+        cost_today = _to_decimal(event.estimated_cost)
         if event.is_annual:
-            # Add cost to every year from event_year through projection end
+            # Each occurrence is inflated to its own year (costs rise with CPI each year)
             for yr in range(event.event_year, projection_end + 1):
-                life_cost_map[yr] = life_cost_map.get(yr, Decimal("0")) + cost
+                years_out = max(0, yr - start_year)
+                inflated = cost_today * ((Decimal("1") + cpi_rate) ** years_out)
+                life_cost_map[yr] = life_cost_map.get(yr, Decimal("0")) + inflated
                 life_event_details_map.setdefault(yr, []).append(
                     {
                         "label": label + " (annual)",
-                        "amount": float(cost),
+                        "amount": float(inflated),
                     }
                 )
         else:
+            years_out = max(0, event.event_year - start_year)
+            inflated = cost_today * ((Decimal("1") + cpi_rate) ** years_out)
             life_cost_map[event.event_year] = (
-                life_cost_map.get(event.event_year, Decimal("0")) + cost
+                life_cost_map.get(event.event_year, Decimal("0")) + inflated
             )
             life_event_details_map.setdefault(event.event_year, []).append(
                 {
                     "label": label,
-                    "amount": float(cost),
+                    "amount": float(inflated),
                 }
             )
 

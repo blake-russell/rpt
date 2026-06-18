@@ -99,7 +99,7 @@ def retirement_dashboard(request):
     chart_rows = [row for row in projection_rows if row["year"] >= chart_start_year]
     cashflow_years = [row["year"] for row in chart_rows]
     cashflow_income = [float(row["household_income"]) for row in chart_rows]
-    cashflow_withdrawals = [float(row["required_withdrawals"]) for row in chart_rows]
+    cashflow_withdrawals = [float(row["total_from_assets"]) for row in chart_rows]
     cashflow_expenses = [float(row["total_expenses"]) for row in chart_rows]
 
     net_by_year = {row["year"]: float(row["net_worth"]) for row in projection_rows}

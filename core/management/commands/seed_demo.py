@@ -13,7 +13,7 @@ Demo household:
 
 import csv
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
@@ -139,7 +139,7 @@ class Command(BaseCommand):
             is_current=True,
             defaults={
                 "employer": "Acme Corp",
-                "annual_salary": Decimal("85000"),
+                "annual_salary": Decimal("72000"),
                 "effective_date": date(CURRENT_YEAR - 3, 1, 1),
             },
         )
@@ -156,14 +156,14 @@ class Command(BaseCommand):
             raise_type="annual_pct",
             defaults={"annual_pct": Decimal("2.00")},
         )
-        # John SS: claims at 67 (FRA)
+        # John SS: claims at 67 (FRA) — estimated for ~$72k career earnings
         SocialSecurity.objects.update_or_create(
             person=john,
             defaults={
                 "planned_claim_age": 67,
-                "monthly_benefit_age_62": Decimal("1850"),
-                "monthly_benefit_fra": Decimal("2700"),
-                "monthly_benefit_age_70": Decimal("3350"),
+                "monthly_benefit_age_62": Decimal("1600"),
+                "monthly_benefit_fra": Decimal("2350"),
+                "monthly_benefit_age_70": Decimal("2920"),
             },
         )
 
@@ -173,7 +173,7 @@ class Command(BaseCommand):
             is_current=True,
             defaults={
                 "employer": "Beta Inc",
-                "annual_salary": Decimal("60000"),
+                "annual_salary": Decimal("52000"),
                 "effective_date": date(CURRENT_YEAR - 2, 1, 1),
             },
         )
@@ -190,18 +190,18 @@ class Command(BaseCommand):
             raise_type="annual_pct",
             defaults={"annual_pct": Decimal("3.00")},
         )
-        # Jane SS: claims at 64
+        # Jane SS: claims at 64 — estimated for ~$52k career earnings
         SocialSecurity.objects.update_or_create(
             person=jane,
             defaults={
                 "planned_claim_age": 64,
-                "monthly_benefit_age_62": Decimal("1200"),
-                "monthly_benefit_fra": Decimal("1750"),
-                "monthly_benefit_age_70": Decimal("2175"),
+                "monthly_benefit_age_62": Decimal("1050"),
+                "monthly_benefit_fra": Decimal("1520"),
+                "monthly_benefit_age_70": Decimal("1890"),
             },
         )
         self.stdout.write(
-            "  ✓ Income: John $85k + 10% bonus, Jane $60k + 5% bonus; SS estimates added"
+            "  ✓ Income: John $72k + 10% bonus, Jane $52k + 5% bonus; SS estimates added"
         )
 
     # ── Assets ────────────────────────────────────────────────────────────────
@@ -229,7 +229,7 @@ class Command(BaseCommand):
                     "shares": shares.quantize(Decimal("0.0001")),
                     "avg_cost_basis": Decimal("220.00"),
                     "last_price": VTI_PRICE,
-                    "last_price_updated": CURRENT_DATE,
+                    "last_price_updated": datetime.combine(CURRENT_DATE, datetime.min.time(), tzinfo=timezone.utc),
                 },
             )
             MonthlyContribution.objects.update_or_create(
@@ -270,7 +270,7 @@ class Command(BaseCommand):
             defaults={
                 "loan_type": "car",
                 "original_balance": Decimal("30000"),
-                "current_balance": Decimal("28500"),
+                "current_balance": Decimal("22500"),
                 "interest_rate_pct": Decimal("8.000"),
                 "origination_date": date(2025, 1, 1),
                 "maturity_date": date(2030, 1, 1),
@@ -310,7 +310,7 @@ class Command(BaseCommand):
                 event_type="vehicle",
                 dependent_age_at_event=16,
                 description="First car for Jack",
-                estimated_cost=Decimal("8000"),
+                estimated_cost=Decimal("12000"),
             ),
             dict(
                 dependent=jack,
@@ -324,35 +324,35 @@ class Command(BaseCommand):
                 event_type="vehicle",
                 dependent_age_at_event=18,
                 description="First car for Sally",
-                estimated_cost=Decimal("10000"),
+                estimated_cost=Decimal("13000"),
             ),
             dict(
                 dependent=sally,
                 event_type="education",
                 dependent_age_at_event=18,
                 description="Community college year 1",
-                estimated_cost=Decimal("3000"),
+                estimated_cost=Decimal("4000"),
             ),
             dict(
                 dependent=sally,
                 event_type="education",
                 dependent_age_at_event=19,
                 description="Community college year 2",
-                estimated_cost=Decimal("3000"),
+                estimated_cost=Decimal("4000"),
             ),
             dict(
                 dependent=sally,
                 event_type="education",
                 dependent_age_at_event=20,
                 description="Community college year 3",
-                estimated_cost=Decimal("3000"),
+                estimated_cost=Decimal("4000"),
             ),
             dict(
                 dependent=sally,
                 event_type="education",
                 dependent_age_at_event=21,
                 description="Community college year 4",
-                estimated_cost=Decimal("3000"),
+                estimated_cost=Decimal("4000"),
             ),
             dict(
                 dependent=sally,
@@ -365,7 +365,7 @@ class Command(BaseCommand):
                 event_type="wedding",
                 dependent_age_at_event=30,
                 description="Sally's wedding",
-                estimated_cost=Decimal("15000"),
+                estimated_cost=Decimal("25000"),
             ),
         ]
         LifeEvent.objects.filter(dependent__in=[jack, sally]).delete()
@@ -410,7 +410,7 @@ class Command(BaseCommand):
 
     def _generate_csv_files(self):
         """Generate sample WF checking and credit card CSVs for the Budget module."""
-        output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data")
+        output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
         os.makedirs(output_dir, exist_ok=True)
 
         checking_rows = self._build_checking_rows()
@@ -425,117 +425,99 @@ class Command(BaseCommand):
         self.stdout.write(f"  ✓ CSV: {credit_path}")
 
     def _build_checking_rows(self):
-        """3 months of checking transactions: payroll + bills."""
+        """One month of checking transactions with realistic net pay after payroll deductions.
+
+        Net pay derivation (monthly, Texas — no state income tax):
+          John $72k: gross $6,000 − trad 401k $400 − FICA $459 − fed withholding $632
+                     − Roth 401k $400 = $4,109/mo → $2,054.38/paycheck (×2)
+          Jane $52k: gross $4,333 − trad 401k $300 − FICA $332 − fed withholding $444
+                     − Roth 401k $300 = $2,957/mo → $1,478.79/paycheck (×2)
+
+        Mortgage shown as escrowed total: P+I $1,374 + insurance $150 + tax $350 = $1,874.
+        Auto insurance: John $1,400/yr + Jane $1,100/yr = $208/mo combined.
+        401k contributions and CC transfers omitted (already reflected in net pay / CC module).
+        """
         rows = []
-        for month_offset in range(3):
-            base = date(CURRENT_YEAR, 1, 1) + timedelta(days=28 * month_offset)
-            month = base.month
-            year = base.year
+        year = CURRENT_YEAR
+        month = 1
 
-            def d(day):
-                try:
-                    return date(year, month, day).strftime("%m/%d/%Y")
-                except ValueError:
-                    return date(year, month, 28).strftime("%m/%d/%Y")
+        def d(day):
+            try:
+                return date(year, month, day).strftime("%m/%d/%Y")
+            except ValueError:
+                return date(year, month, 28).strftime("%m/%d/%Y")
 
-            # John payroll (bi-weekly): ~$2700 net (85k/26 × 0.82)
-            rows += [
-                (d(1), "DIRECT DEP ACME CORP PAYROLL", "3265.38", "", "Posted"),
-                (d(15), "DIRECT DEP ACME CORP PAYROLL", "3265.38", "", "Posted"),
-            ]
-            # Jane payroll (bi-weekly): ~$1900 net (60k/26 × 0.82)
-            rows += [
-                (d(7), "DIRECT DEP BETA INC PAYROLL", "2307.69", "", "Posted"),
-                (d(21), "DIRECT DEP BETA INC PAYROLL", "2307.69", "", "Posted"),
-            ]
-            # Mortgage
-            rows.append((d(5), "WELLS FARGO HOME MTG PMT", "-1374.00", "", "Posted"))
-            # Cars
-            rows.append((d(10), "AUTO LOAN PMT JOHN VEHICLE", "-608.00", "", "Posted"))
-            rows.append((d(12), "AUTO LOAN PMT JANE VEHICLE", "-368.00", "", "Posted"))
-            # Utilities
-            rows += [
-                (d(8), "ATMOS ENERGY GAS BILL", "-145.00", "", "Posted"),
-                (d(9), "ONCOR ELECTRIC DELIVERY", "-210.00", "", "Posted"),
-                (d(11), "AT&T WIRELESS", "-185.00", "", "Posted"),
-                (d(13), "SPECTRUM INTERNET CABLE", "-120.00", "", "Posted"),
-            ]
-            # Groceries (checking)
-            rows += [
-                (d(3), "HEB GROCERY 1234", "-280.00", "", "Posted"),
-                (d(17), "HEB GROCERY 1234", "-265.00", "", "Posted"),
-            ]
-            # Credit card payment
-            rows.append((d(20), "WF Credit Card   AUTO PAY   XXXX", "-1850.00", "", "Posted"))
-            # 401k contributions (to be excluded)
-            rows += [
-                (
-                    d(1),
-                    "EMPOWER          EMPOWER           401K CONTRIBUTION",
-                    "-400.00",
-                    "",
-                    "Posted",
-                ),
-                (
-                    d(15),
-                    "EMPOWER          EMPOWER           401K CONTRIBUTION",
-                    "-400.00",
-                    "",
-                    "Posted",
-                ),
-            ]
-            # Savings transfer (to be excluded)
-            rows.append(
-                (d(5), "RECURRING TRANSFER TO SAVINGS REF #XXXXXXXX", "-500.00", "", "Posted")
-            )
+        # Payroll deposits — bi-weekly (1st/15th John, 7th/21st Jane)
+        rows += [
+            (d(1),  "DIRECT DEP ACME CORP PAYROLL", "2054.38", "", "Posted"),
+            (d(15), "DIRECT DEP ACME CORP PAYROLL", "2054.38", "", "Posted"),
+            (d(7),  "DIRECT DEP BETA INC PAYROLL",  "1478.79", "", "Posted"),
+            (d(21), "DIRECT DEP BETA INC PAYROLL",  "1478.79", "", "Posted"),
+        ]
+        # Mortgage (escrowed: P+I + homeowners insurance + property tax)
+        rows.append((d(5), "WELLS FARGO HOME MTG PMT", "-1874.00", "", "Posted"))
+        # Vehicle loans
+        rows.append((d(10), "AUTO LOAN PMT JOHN VEHICLE", "-608.00", "", "Posted"))
+        rows.append((d(12), "AUTO LOAN PMT JANE VEHICLE", "-368.00", "", "Posted"))
+        # Insurance
+        rows.append((d(3),  "BCBSTX HEALTH INS PREMIUM",  "-450.00", "", "Posted"))
+        rows.append((d(6),  "STATE FARM AUTO INS PAYMENT", "-208.00", "", "Posted"))
+        # Utilities
+        rows += [
+            (d(8),  "ATMOS ENERGY GAS BILL",    "-145.00", "", "Posted"),
+            (d(9),  "ONCOR ELECTRIC DELIVERY",  "-210.00", "", "Posted"),
+            (d(11), "AT&T WIRELESS",             "-185.00", "", "Posted"),
+            (d(13), "SPECTRUM INTERNET CABLE",  "-120.00", "", "Posted"),
+        ]
+        # Groceries
+        rows += [
+            (d(3),  "HEB GROCERY 1234", "-280.00", "", "Posted"),
+            (d(17), "HEB GROCERY 1234", "-265.00", "", "Posted"),
+        ]
 
         return rows
 
     def _build_credit_rows(self):
-        """3 months of credit card transactions: everyday expenses."""
+        """One month of credit card transactions: everyday discretionary spending."""
         rows = []
-        for month_offset in range(3):
-            base = date(CURRENT_YEAR, 1, 1) + timedelta(days=28 * month_offset)
-            month = base.month
-            year = base.year
+        year = CURRENT_YEAR
+        month = 1
 
-            def d(day):
-                try:
-                    return date(year, month, day).strftime("%m/%d/%Y")
-                except ValueError:
-                    return date(year, month, 28).strftime("%m/%d/%Y")
+        def d(day):
+            try:
+                return date(year, month, day).strftime("%m/%d/%Y")
+            except ValueError:
+                return date(year, month, 28).strftime("%m/%d/%Y")
 
-            # Groceries
-            rows += [
-                (d(2), "KROGER 1234 GROCERIES", "-195.00", "", "Posted"),
-                (d(16), "WALMART GROCERY PICKUP", "-175.00", "", "Posted"),
-            ]
-            # Dining
-            rows += [
-                (d(5), "CHICK FIL A 1234", "-42.50", "", "Posted"),
-                (d(11), "CHIPOTLE MEXICAN GRILL", "-38.00", "", "Posted"),
-                (d(18), "PIZZA HUT 1234", "-55.00", "", "Posted"),
-                (d(25), "OLIVE GARDEN 1234", "-78.00", "", "Posted"),
-            ]
-            # Gas
-            rows += [
-                (d(4), "EXXON MOBIL GAS 1234", "-65.00", "", "Posted"),
-                (d(19), "SHELL GAS STATION 5678", "-70.00", "", "Posted"),
-            ]
-            # Subscriptions
-            rows += [
-                (d(1), "NETFLIX.COM", "-22.99", "", "Posted"),
-                (d(1), "SPOTIFY USA", "-11.99", "", "Posted"),
-                (d(3), "AMAZON PRIME", "-14.99", "", "Posted"),
-            ]
-            # Kids / misc
-            rows += [
-                (d(8), "TARGET STORES 1234", "-120.00", "", "Posted"),
-                (d(22), "AMAZON.COM AMZN.COM/BILL", "-85.00", "", "Posted"),
-                (d(14), "WALGREENS 1234", "-45.00", "", "Posted"),
-            ]
-            # Credit card payment (income — exclude)
-            rows.append((d(20), "AUTOMATIC PAYMENT - THANK YOU", "1850.00", "", "Posted"))
+        # Groceries
+        rows += [
+            (d(2),  "KROGER 1234 GROCERIES",   "-195.00", "", "Posted"),
+            (d(16), "WALMART GROCERY PICKUP",   "-175.00", "", "Posted"),
+        ]
+        # Dining
+        rows += [
+            (d(5),  "CHICK FIL A 1234",        "-42.50", "", "Posted"),
+            (d(11), "CHIPOTLE MEXICAN GRILL",   "-38.00", "", "Posted"),
+            (d(18), "PIZZA HUT 1234",           "-55.00", "", "Posted"),
+            (d(25), "OLIVE GARDEN 1234",        "-78.00", "", "Posted"),
+        ]
+        # Gas
+        rows += [
+            (d(4),  "EXXON MOBIL GAS 1234",    "-65.00", "", "Posted"),
+            (d(19), "SHELL GAS STATION 5678",   "-70.00", "", "Posted"),
+        ]
+        # Subscriptions
+        rows += [
+            (d(1), "NETFLIX.COM",   "-22.99", "", "Posted"),
+            (d(1), "SPOTIFY USA",   "-11.99", "", "Posted"),
+            (d(3), "AMAZON PRIME",  "-14.99", "", "Posted"),
+        ]
+        # Kids / household misc
+        rows += [
+            (d(8),  "TARGET STORES 1234",          "-120.00", "", "Posted"),
+            (d(22), "AMAZON.COM AMZN.COM/BILL",     "-85.00",  "", "Posted"),
+            (d(14), "WALGREENS 1234",               "-45.00",  "", "Posted"),
+        ]
 
         return rows
 
