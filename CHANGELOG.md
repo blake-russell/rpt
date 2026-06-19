@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v0.2.0 (2026-06-19)
+
+### Features
+
+- Budget CRUD, bulk actions, pagination, and healthcare inflation bucket
+  ([`928e067`](https://github.com/blake-russell/rpt/commit/928e06701b2bd04c9e71e1b518db65b4d8caccb2))
+
+Budget dashboard: - Add transaction edit and delete (individual rows) - Add bulk approve/deny for
+  pending duplicates - Add bulk merchant mapping (assign category to multiple descriptions at once)
+  - Paginate transactions table at 100/page, pruned to last 6 months - Fix action button layout
+  (text-nowrap, side-by-side, no wrapping) - Truncate long description/friendly-name columns with
+  ellipsis + title tooltip - Add is_medical_expense flag to ExpenseCategory (migration 0002) - Track
+  healthcare expenses separately in monthly_cashflow_summary - Add Medical badge to categories page
+  Tags column
+
+Retirement engine: - Split consumer expenses into healthcare bucket (healthcare_inflation_pct) and
+  regular bucket (CPI), pre-computed outside the projection loop - Wire healthcare_inflation_pct
+  from RetirementSettings through to engine - Add human-readable labels to RetirementSettingsForm
+
+Debts: - Remove defunct DebtInfo singleton model, form, admin, view, and URL (fields migrated to
+  Loan; template no longer referenced them) - Add migration 0002 to drop debts_debtinfo table
+
+
 ## v0.1.1 (2026-06-18)
 
 ### Code Style
