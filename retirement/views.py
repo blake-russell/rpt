@@ -88,6 +88,7 @@ def retirement_dashboard(request):
         use_budget_cashflow_for_income=settings_obj.use_budget_cashflow_for_income,
         dependent_leave_expense_reduction_pct=settings_obj.dependent_leave_expense_reduction_pct,
         withdrawal_strategy=settings_obj.withdrawal_strategy,
+        healthcare_inflation_pct=settings_obj.healthcare_inflation_pct,
     )
 
     years = [row["year"] for row in projection_rows]

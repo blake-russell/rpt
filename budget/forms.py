@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import ExclusionRule, ExpenseCategory
+from .models import ExclusionRule, ExpenseCategory, Transaction
 
 
 class CSVImportForm(forms.Form):
@@ -15,9 +15,26 @@ class CSVImportForm(forms.Form):
 class ExpenseCategoryForm(forms.ModelForm):
     class Meta:
         model = ExpenseCategory
-        fields = ["name", "color_hex", "is_debt_service"]
+        fields = ["name", "color_hex", "is_debt_service", "is_medical_expense"]
         widgets = {
             "color_hex": forms.TextInput(attrs={"type": "color"}),
+        }
+
+
+class TransactionEditForm(forms.ModelForm):
+    class Meta:
+        model = Transaction
+        fields = [
+            "date",
+            "friendly_name",
+            "category",
+            "amount",
+            "source",
+            "is_excluded",
+            "exclusion_note",
+        ]
+        widgets = {
+            "date": forms.DateInput(attrs={"type": "date"}),
         }
 
 

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import DebtInfo, Loan
+from .models import Loan
 
 
 class LoanForm(forms.ModelForm):
@@ -62,20 +62,4 @@ class LoanForm(forms.ModelForm):
             "property_estimated_value": "Real estate only — current estimated market value.",
             "expected_home_value_growth_pct": "Used in retirement projections for home value growth assumptions.",
             "interest_rate_pct": "Annual interest rate as a percentage, e.g. 6.750 for 6.75%.",
-        }
-
-
-class DebtInfoForm(forms.ModelForm):
-    class Meta:
-        model = DebtInfo
-        fields = [
-            "homeowners_insurance_yearly",
-            "real_estate_tax_yearly",
-            "car_insurance_total_premium",
-            "car_insurance_frequency",
-        ]
-        widgets = {
-            "homeowners_insurance_yearly": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
-            "real_estate_tax_yearly": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
-            "car_insurance_total_premium": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
         }

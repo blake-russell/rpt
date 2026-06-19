@@ -2,10 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
 
-from .forms import DebtInfoForm, LoanForm
-from .models import DebtInfo, Loan
+from .forms import LoanForm
+from .models import Loan
 from .utils import payoff_schedule
 
 
@@ -14,7 +13,6 @@ def debts_dashboard(request):
     loans = Loan.objects.filter(is_active=True)
     total_debt = sum(loan.current_balance for loan in loans)
     total_equity = sum(loan.equity for loan in loans if loan.equity is not None)
-    debt_info = DebtInfo.get()
 
     grouped = {}
     for lt, label in Loan.LOAN_TYPES:
@@ -29,23 +27,8 @@ def debts_dashboard(request):
             "grouped": grouped,
             "total_debt": total_debt,
             "total_equity": total_equity,
-            "debt_info_form": DebtInfoForm(instance=debt_info),
-            "debt_info": debt_info,
         },
     )
-
-
-@login_required
-@require_POST
-def debt_info_save(request):
-    debt_info = DebtInfo.get()
-    form = DebtInfoForm(request.POST, instance=debt_info)
-    if form.is_valid():
-        form.save()
-        messages.success(request, "Debt informational amounts updated.")
-    else:
-        messages.error(request, "Please correct the debt informational fields and try again.")
-    return redirect("debts_dashboard")
 
 
 @login_required

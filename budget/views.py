@@ -2,12 +2,13 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from .forms import CSVImportForm, ExclusionRuleForm, ExpenseCategoryForm
+from .forms import CSVImportForm, ExclusionRuleForm, ExpenseCategoryForm, TransactionEditForm
 from .importers import _match_exclusion_rule, import_bank_csv
 from .models import ExclusionRule, ExpenseCategory, ImportLog, MerchantMapping, Transaction
 from .utils import monthly_cashflow_summary
@@ -37,11 +38,24 @@ def _build_chart_data(transactions):
     return labels, values, colors
 
 
+def _six_months_ago():
+    from datetime import date
+
+    today = date.today()
+    m = today.month - 6
+    y = today.year
+    if m <= 0:
+        m += 12
+        y -= 1
+    return date(y, m, 1)
+
+
 @login_required
 def budget_dashboard(request):
     month = request.GET.get("month", "")
     category_id = request.GET.get("category", "")
     include_excluded = request.GET.get("include_excluded") == "1"
+    page_number = request.GET.get("page", 1)
 
     base_qs = Transaction.objects.select_related("category")
     if not include_excluded:
@@ -96,12 +110,24 @@ def budget_dashboard(request):
         .order_by("raw_description")
     )
 
+    # Prune table display to last 6 months; headline stats use full history.
+    cutoff = _six_months_ago()
+    table_qs = transactions.filter(date__gte=cutoff)
+    page_obj = Paginator(table_qs, 100).get_page(page_number)
+
+    # Build base querystring for pagination links (preserves active filters).
+    qp = request.GET.copy()
+    qp.pop("page", None)
+    pagination_base = (qp.urlencode() + "&") if qp.urlencode() else ""
+
     return render(
         request,
         "budget/dashboard.html",
         {
             "import_form": CSVImportForm(),
-            "transactions": transactions[:300],
+            "page_obj": page_obj,
+            "pagination_base": pagination_base,
+            "table_cutoff": cutoff,
             "categories": categories,
             "month_options": month_options,
             "selected_month": month,
@@ -260,6 +286,38 @@ def save_mapping(request):
 
 
 @login_required
+def bulk_save_mappings(request):
+    if request.method != "POST":
+        return redirect("budget_dashboard")
+
+    raw_descriptions = request.POST.getlist("raw_descriptions")
+    category_id = request.POST.get("category")
+
+    if not raw_descriptions:
+        messages.warning(request, "No descriptions selected.")
+        return redirect("budget_dashboard")
+
+    category = ExpenseCategory.objects.filter(pk=category_id).first() if category_id else None
+    saved = 0
+    for raw in raw_descriptions:
+        raw = raw.strip()
+        if not raw:
+            continue
+        mapping, _ = MerchantMapping.objects.update_or_create(
+            raw_description=raw,
+            defaults={"friendly_name": raw[:200], "category": category},
+        )
+        Transaction.objects.filter(raw_description=raw).update(
+            friendly_name=mapping.friendly_name,
+            category=mapping.category,
+        )
+        saved += 1
+
+    messages.success(request, f"Saved {saved} merchant mapping(s).")
+    return redirect("budget_dashboard")
+
+
+@login_required
 def categories_manage(request):
     form = ExpenseCategoryForm(request.POST or None)
     if form.is_valid():
@@ -345,6 +403,54 @@ def apply_exclusion_rules(request):
             updated += 1
     messages.success(request, f"Applied exclusion rules to {updated} existing transaction(s).")
     return redirect("budget_exclusion_rules")
+
+
+@login_required
+def transaction_edit(request, pk):
+    tx = get_object_or_404(Transaction, pk=pk)
+    form = TransactionEditForm(request.POST or None, instance=tx)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Transaction updated.")
+        return redirect("budget_dashboard")
+    return render(request, "budget/transaction_form.html", {"form": form, "tx": tx})
+
+
+@login_required
+@require_POST
+def transaction_delete(request, pk):
+    tx = get_object_or_404(Transaction, pk=pk)
+    tx.delete()
+    messages.success(request, "Transaction deleted.")
+    return redirect("budget_dashboard")
+
+
+@login_required
+@require_POST
+def duplicates_bulk_action(request):
+    action = (request.POST.get("action") or "").strip()
+    pks = request.POST.getlist("duplicate_ids")
+
+    if not pks:
+        messages.warning(request, "No duplicates selected.")
+        return redirect("budget_dashboard")
+
+    qs = Transaction.objects.filter(pk__in=pks, is_pending_duplicate=True)
+
+    if action == "approve":
+        updated = qs.update(is_pending_duplicate=False, is_excluded=False, exclusion_note="")
+        messages.success(request, f"Approved {updated} duplicate(s) and added to budget.")
+    elif action == "deny":
+        updated = qs.update(
+            is_pending_duplicate=False,
+            is_excluded=True,
+            exclusion_note="Duplicate denied — excluded from budget",
+        )
+        messages.success(request, f"Denied {updated} duplicate(s).")
+    else:
+        messages.error(request, "Invalid bulk duplicate action.")
+
+    return redirect("budget_dashboard")
 
 
 @login_required

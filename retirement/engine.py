@@ -282,6 +282,7 @@ def build_projection(
     use_budget_cashflow_for_income=True,
     dependent_leave_expense_reduction_pct=Decimal("0"),
     withdrawal_strategy="traditional",
+    healthcare_inflation_pct=Decimal("4.50"),
 ):
     inflation_rate = _to_decimal(expenses_annual_growth_pct)
     projection_end = min(end_year, life_expectancy_year)
@@ -327,6 +328,23 @@ def build_projection(
     cashflow = monthly_cashflow_summary(exclude_debt_service=True)
     rolling_income_annual = _to_decimal(cashflow["rolling_avg_income"]) * Decimal("12")
     rolling_expenses_annual = _to_decimal(cashflow["rolling_avg_expenses"]) * Decimal("12")
+    rolling_healthcare_annual = _to_decimal(cashflow["rolling_avg_healthcare_expenses"]) * Decimal(
+        "12"
+    )
+
+    # Pre-compute base spending split for the projection loop
+    base_spending = _to_decimal(annual_spending_today)
+    if use_budget_cashflow_for_income and rolling_expenses_annual > 0:
+        base_spending = rolling_expenses_annual
+    elif base_spending == Decimal("0"):
+        base_spending = rolling_expenses_annual
+    base_healthcare = (
+        rolling_healthcare_annual
+        if (use_budget_cashflow_for_income and rolling_expenses_annual > 0)
+        else Decimal("0")
+    )
+    base_regular = max(base_spending - base_healthcare, Decimal("0"))
+    healthcare_rate = _to_decimal(healthcare_inflation_pct) / Decimal("100")
 
     # Split assets into three tax buckets
     taxable_assets = Decimal("0")  # brokerage, crypto, other
@@ -409,16 +427,13 @@ def build_projection(
         deferred_value += deferred_yearly_contrib * active_income_share
         roth_value += roth_yearly_contrib * active_income_share
 
-        # Consumer expenses (non-debt): inflated by CPI
-        base_spending = _to_decimal(annual_spending_today)
-        if use_budget_cashflow_for_income and rolling_expenses_annual > 0:
-            base_spending = rolling_expenses_annual
-        elif base_spending == Decimal("0"):
-            base_spending = rolling_expenses_annual
-
-        consumer_expenses = base_spending * (
-            (Decimal("1") + (inflation_rate / Decimal("100"))) ** years_from_start
+        # Consumer expenses: healthcare bucket inflated at healthcare_inflation_pct,
+        # remaining non-debt expenses inflated at CPI (expenses_annual_growth_pct).
+        healthcare_expenses = base_healthcare * (
+            (Decimal("1") + healthcare_rate) ** years_from_start
         )
+        regular_expenses = base_regular * ((Decimal("1") + cpi_rate) ** years_from_start)
+        consumer_expenses = healthcare_expenses + regular_expenses
 
         moveout_hits = sum(1 for (y, _name) in dependent_moveout_years if y <= year)
         moveout_this_year = [(y, name) for (y, name) in dependent_moveout_years if y == year]

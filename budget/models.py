@@ -16,6 +16,10 @@ class ExpenseCategory(models.Model):
         default=False,
         help_text="Mark true for categories like mortgage/car/student loan payments.",
     )
+    is_medical_expense = models.BooleanField(
+        default=False,
+        help_text="Mark true for medical/healthcare categories. These inflate at the healthcare inflation rate (not CPI) in retirement projections.",
+    )
 
     class Meta:
         ordering = ["name"]

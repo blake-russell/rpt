@@ -28,6 +28,15 @@ class RetirementSettingsForm(forms.ModelForm):
                 attrs={"step": "0.01", "min": "0", "max": "100"}
             ),
         }
+        labels = {
+            "portfolio_growth_rate_pct": "Portfolio Growth Rate (%)",
+            "expenses_annual_growth_pct": "CPI / Expense Growth Rate (%)",
+            "ss_cola_pct": "Social Security COLA (%)",
+            "healthcare_inflation_pct": "Healthcare Inflation Rate (%)",
+            "use_budget_cashflow_for_income": "Use budget cashflow for expense baseline",
+            "dependent_leave_expense_reduction_pct": "Expense reduction when dependents leave (%)",
+            "withdrawal_strategy": "Withdrawal Strategy",
+        }
 
 
 class PayoffScenarioForm(forms.Form):

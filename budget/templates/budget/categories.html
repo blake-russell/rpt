@@ -29,7 +29,7 @@
         {% if categories %}
         <table class="table table-sm align-middle mb-0">
           <thead>
-            <tr><th>Name</th><th>Color</th><th>Debt Service</th><th></th></tr>
+            <tr><th>Name</th><th>Color</th><th>Tags</th><th></th></tr>
           </thead>
           <tbody>
             {% for category in categories %}
@@ -38,7 +38,11 @@
               <td>
                 <span class="badge" style="background: {{ category.color_hex }}">{{ category.color_hex }}</span>
               </td>
-              <td>{% if category.is_debt_service %}<span class="badge bg-warning text-dark">Yes</span>{% else %}—{% endif %}</td>
+              <td>
+                {% if category.is_debt_service %}<span class="badge bg-warning text-dark">Debt Service</span> {% endif %}
+                {% if category.is_medical_expense %}<span class="badge bg-info text-dark">Medical</span>{% endif %}
+                {% if not category.is_debt_service and not category.is_medical_expense %}—{% endif %}
+              </td>
               <td class="text-end">
                 <a href="{% url 'budget_category_edit' category.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
                 <a href="{% url 'budget_category_delete' category.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
