@@ -2,7 +2,23 @@
 name = "RPT"
 version = "0.2.0"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "django>=6.0",
+    "django-htmx",
+    "django-crispy-forms",
+    "crispy-bootstrap5",
+    "yfinance",
+    "requests",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-django",
+    "pytest-cov",
+    "ruff==0.15.17",
+    "python-semantic-release",
+]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
@@ -14,3 +30,32 @@ changelog_file = "CHANGELOG.md"
 [tool.semantic_release.commit_parser_options]
 minor_tags = ["feat"]
 patch_tags = ["fix", "perf"]
+
+# --- Ruff (moved from ruff.toml) ---
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501", # line too long - enforced by formatter, not checker
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*.py" = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# --- Pytest (moved from pytest.ini) ---
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "rpt.test_settings"
+python_files = ["tests.py", "test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=ai_insights --cov=assets --cov=budget --cov=core --cov=debts --cov=income --cov=life --cov=people --cov=retirement --cov-report=term-missing --cov-fail-under=30 -q"

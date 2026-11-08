@@ -6,7 +6,9 @@ rpt.pid
 # Dotfiles — ignore all except explicitly listed
 .*
 !.gitignore
+!.gitattributes
 !.env.example
+!.python-version
 # Dot-directories — ignore all except .github/
 .*/
 !.github/
